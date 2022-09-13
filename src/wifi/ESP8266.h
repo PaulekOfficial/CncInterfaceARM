@@ -17,6 +17,7 @@ using namespace std;
 #define COMMAND_CONNECTION_STATUS "+CIPSTATUS"
 #define COMMAND_PING "+PING="
 #define COMMAND_AUTOCONNECT "+CWAUTOCONN"
+#define COMMAND_QUERY_SET_IP_ESP "+CIPSTA"
 #define COMMAND_HTTP_CLIENT "+HTTPCLIENT="
 #define COMMAND_HTTP_GET_SIZE "+HTTPGETSIZE="
 #define COMMAND_HTTP_POST "+HTTPCPOST="
@@ -28,6 +29,15 @@ enum CLIENT_CONTENT_TYPE {ApplicationForm = 0, ApplicationJson = 1, Multipart = 
 enum CLIENT_TRANSPORT_TYPE {OverTCP = 1, OverSSL = 2};
 enum DHCP_MODE {StationM = 0, SoftAPM = 1, EthernetM = 2};
 
+class ESPIPSettings {
+public:
+    string ip;
+    string gateway;
+    string netmask;
+    string ipv6;
+    string ipv6g;
+};
+
 class ESP8266 {
 private:
     uart_inst* uart_id;
@@ -38,6 +48,7 @@ private:
     bool connected;
 
     list<string> listNetworks();
+    ESPIPSettings getIpSettingsESP();
 public:
     explicit ESP8266(uart_inst* uart);
 
@@ -56,10 +67,7 @@ public:
     bool autoConnect(bool enable);
     bool staticIp(string ip, string gateway, string netmask, string ipv6Address);
 
-    string getIp();
-    string getGateway();
-    string getNetmask();
-    string getMac();
+    ESPIPSettings getAddress();
 
     string http(CLIENT_REQUEST requestType, CLIENT_CONTENT_TYPE contentType, string url, string host, string path, CLIENT_TRANSPORT_TYPE transportType, string data, string header);
     string httpPost(string url, string data);

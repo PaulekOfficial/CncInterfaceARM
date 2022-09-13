@@ -7,6 +7,40 @@ list<string> ESP8266::listNetworks() {
     return networks;
 }
 
+ESPIPSettings ESP8266::getIpSettingsESP() {
+    string command = (string) COMMAND_BASE + COMMAND_QUERY_SET_IP_ESP;
+    sendSerialMessage(command, uart_id);
+    string ip = waitUntilSerialStartsWith("+CIPSTA:ip:", 10000);
+    string gateway = waitUntilSerialStartsWith("+CIPSTA:gateway:", 10000);
+    string netmask = waitUntilSerialStartsWith("+CIPSTA:netmask:", 10000);
+    string ipv6l = waitUntilSerialStartsWith("+CIPSTA:ip6ll:", 10000);
+    string ipv6g = waitUntilSerialStartsWith("+CIPSTA:ip6gl:", 10000);
+
+    if(!waitUntilSerialOK(1000)) {
+        debug("Failed to get wifi module ip settings");
+    }
+
+    replace(ip, "+CIPSTA:ip:", "");
+    replace(ip, "\r\n", "");
+    replace(gateway, "+CIPSTA:gateway:", "");
+    replace(gateway, "\r\n", "");
+    replace(netmask, "+CIPSTA:gateway:", "");
+    replace(netmask, "\r\n", "");
+    replace(ipv6l, "+CIPSTA:ip6ll:", "");
+    replace(ipv6l, "\r\n", "");
+    replace(ipv6g, "+CIPSTA:ip6gl:", "");
+    replace(ipv6g, "\r\n", "");
+
+    ESPIPSettings settings;
+    settings.ip = ip;
+    settings.gateway = gateway;
+    settings.netmask = netmask;
+    settings.ipv6 = ipv6l;
+    settings.ipv6g = ipv6g;
+
+    return settings;
+}
+
 CONNECTION_STATUS ESP8266::getConnectionStatus() {
     string command = (string) COMMAND_BASE + COMMAND_CONNECTION_STATUS;
     sendSerialMessage(command, uart_id);
@@ -195,21 +229,11 @@ bool ESP8266::autoConnect(bool enable) {
 }
 
 bool ESP8266::staticIp(string ip, string gateway, string netmask, string ipv6Address) {
-
+    string command = (string) COMMAND_BASE + COMMAND_QUERY_SET_IP_ESP + "=" + "\"" + ip + "\"" + "," + "\"" + gateway + "\"" + "," + "\"" + netmask + "\"" + "," + "\"" + ipv6Address + "\"";
+    sendSerialMessage(command, uart_id);
+    return waitUntilSerialOK(100000);
 }
 
-string ESP8266::getIp() {
-    return std::__cxx11::string();
-}
-
-string ESP8266::getGateway() {
-    return std::__cxx11::string();
-}
-
-string ESP8266::getNetmask() {
-    return std::__cxx11::string();
-}
-
-string ESP8266::getMac() {
-    return std::__cxx11::string();
+ESPIPSettings ESP8266::getAddress() {
+    return getIpSettingsESP();
 }
