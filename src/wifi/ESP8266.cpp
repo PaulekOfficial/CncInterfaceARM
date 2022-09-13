@@ -204,9 +204,15 @@ string ESP8266::httpPost(string url, string data) {
 }
 
 int ESP8266::httpGetSize(string url) {
-//    <url>: HTTP URL.
-//    <size>: HTTP resource size.
-    return 0;
+    string command = (string) COMMAND_BASE + COMMAND_HTTP_GET_SIZE + "\"" + url + "\"";
+    sendSerialMessage(command, uart_id);
+    string size = waitUntilSerialStartsWith("+HTTPGETSIZE:", 10000);
+    bool success = waitUntilSerialOK(100000);
+    if (!success) {
+        return -1;
+    }
+
+    return stoi(size);
 }
 
 bool ESP8266::disconnect() {
