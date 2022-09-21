@@ -28,6 +28,7 @@ void on_uart_rx() {
 }
 
 void setupUart1() {
+    info("UART interface initialization...");
     // Set uart0 pins function
     gpio_set_function(WIFI_MODULE_TX, GPIO_FUNC_UART);
     gpio_set_function(WIFI_MODULE_RX, GPIO_FUNC_UART);

@@ -24,10 +24,22 @@ using namespace std;
 
 #define FIRMWARE_VERSION     "v0.1"
 
-#define POWER_24V               16
-#define BUZZER                  15
-#define INTERNAL_BATTERY_MOSFET 14
-#define BATTERY_MOSFET          13
-#define ADC_BATTERY             27
-#define ADC_INTERNAL_BATTERY    28
-#define LED                     25
+#define MPU_LED                25
+#define I2C_SDA                6
+#define I2C_SCL                7
+
+#define ADC_SYSTEM_BATTERY     28
+#define ADC_EXTERNAL_BATTERY_0 27
+#define ADC_EXTERNAL_BATTERY_1 16
+
+#define RELAY_POWER_24V        11
+#define RELAY_BAT_0            17
+#define RELAY_BAT_1            16
+
+#define MOSFET_LCD             13
+#define MOSFET_BUZZER          12
+#define MOSFET_WIFI            2
+
+#define BUZZER                 9
+
+#define POWER_24V_READY
