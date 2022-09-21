@@ -23,7 +23,8 @@ int main() {
     stdio_usb_init();
 
     // For debug purposes, wait until serial connected
-    while(!stdio_usb_connected()) {}
+    //while(!stdio_usb_connected()) {}
+    sleep_ms(10000);
 
     info("USB interface initialization done.");
 
@@ -31,19 +32,22 @@ int main() {
     initConfig();
 
     // Setup spi
-    setupUart1();
+    setupUart();
 
     // Setup adc
     initADC();
 
-    // Setup i2c register 1
-    initI2C();
-
     //Setup used pins
     initGPIO();
 
+    // Setup i2c register 1
+    initI2C();
+
     // Setup pull ups
     initPullups();
+
+    // Self test
+    testGPIO();
 
     // Set microcontroller indicator on
     info("Mpu set state to on");
@@ -51,9 +55,6 @@ int main() {
 
     // Setup oled display
     setupOLED();
-
-    // Self test
-    testGPIO();
 
     info("Wait 15 sec for system startup");
     sleep_ms(15000);
@@ -125,7 +126,7 @@ void initADC() {
 }
 void initI2C() {
     info("I2C register 0 interface initialization...");
-    i2c_init(i2c0, 4000000);
+    i2c_init(i2c1, 1000000);
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SDA);
@@ -192,7 +193,7 @@ void initPullups() {
 void setupWiFiModule() {
     info("Turining on wifi module");
     gpio_put(MOSFET_WIFI, true);
-    sleep_ms(1000);
+    sleep_ms(5000);
     int wifiConnectionTrys = 0;
     wifi_init:
     // Setup WIFI module
@@ -243,13 +244,12 @@ void setupBuzzerModule() {
 void setupOLED() {
     info("OLED module initialization...");
     gpio_put(MOSFET_LCD, true);
-    sleep_ms(1000);
-    auto display = pico_ssd1306::SSD1306(i2c0, 0x3C, pico_ssd1306::Size::W128xH32);
-    sleep_ms(250);
+    sleep_ms(5000);
+    auto display = pico_ssd1306::SSD1306(i2c1, 0x3C, pico_ssd1306::Size::W128xH32);
 
     display.setOrientation(0);
 
-    drawText(&display, font_12x16, " PaulekLab", 0 ,0);
+    drawText(&display, font_12x16, "PaulekLab", 0 ,0);
     drawText(&display, font_8x8, "CNCINTERFACE", 0 ,24);
 
     // Send buffer to the display

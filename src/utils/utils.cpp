@@ -27,7 +27,7 @@ void on_uart_rx() {
     }
 }
 
-void setupUart1() {
+void setupUart() {
     info("UART interface initialization...");
     // Set uart0 pins function
     gpio_set_function(WIFI_MODULE_TX, GPIO_FUNC_UART);
@@ -37,9 +37,9 @@ void setupUart1() {
     // Set uart data sending format
     uart_set_format(UART_ID, DATA_BITS, STOP_BITS, PARITY);
     // Setup TX interrupt
-    irq_set_exclusive_handler(UART1_IRQ, on_uart_rx);
+    irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);
     // Enable interrupt
-    irq_set_enabled(UART1_IRQ, true);
+    irq_set_enabled(UART0_IRQ, true);
     // Setup data
     uart_set_irq_enables(UART_ID, true, false);
     info("Done.");

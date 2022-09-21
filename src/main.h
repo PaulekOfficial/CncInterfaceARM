@@ -25,8 +25,8 @@ using namespace std;
 #define FIRMWARE_VERSION     "v0.1"
 
 #define MPU_LED                25
-#define I2C_SDA                6
-#define I2C_SCL                7
+#define I2C_SDA                14
+#define I2C_SCL                15
 
 #define ADC_SYSTEM_BATTERY     28
 #define ADC_EXTERNAL_BATTERY_0 27

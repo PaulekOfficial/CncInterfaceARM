@@ -14,16 +14,16 @@ using namespace std;
 
 #endif //CNCSMARTINTERFACE_UTILS_H
 
-#define UART_ID              uart1
+#define UART_ID              uart0
 #define BAUD_RATE            115200
 #define DATA_BITS            8
 #define STOP_BITS            1
 #define PARITY               UART_PARITY_NONE
 
-#define WIFI_MODULE_TX       4
-#define WIFI_MODULE_RX       5
+#define WIFI_MODULE_TX       0
+#define WIFI_MODULE_RX       1
 
-void setupUart1();
+void setupUart();
 void debug(string debug_message);
 void info(string info_message);
 void sendSerialMessage(string message, uart_inst *uart_inst);
