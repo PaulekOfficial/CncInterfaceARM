@@ -1,6 +1,4 @@
 # Platformio files
-.pio
-CMakeListsPrivate.txt
 cmake-build-*/ 
 
 # Prerequisites

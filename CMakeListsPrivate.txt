@@ -1,0 +1,69 @@
+# !!! WARNING !!! AUTO-GENERATED FILE, PLEASE DO NOT MODIFY IT AND USE
+# https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+#
+# If you need to override existing CMake configuration or add extra,
+# please create `CMakeListsUser.txt` in the root of project.
+# The `CMakeListsUser.txt` will not be overwritten by PlatformIO.
+
+
+
+set(CMAKE_CONFIGURATION_TYPES "pico-dap" CACHE STRING "Build Types reflect PlatformIO Environments" FORCE)
+
+# Convert "Home Directory" that may contain unescaped backslashes on Windows
+
+set(CLION_SVD_FILE_PATH "$ENV{HOME}/.platformio/platforms/wizio-pico/misc/svd/rp2040.svd" CACHE FILEPATH "Peripheral Registers Definitions File" FORCE)
+
+SET(CMAKE_C_COMPILER "$ENV{HOME}/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/bin/arm-none-eabi-gcc")
+SET(CMAKE_CXX_COMPILER "$ENV{HOME}/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/bin/arm-none-eabi-g++")
+SET(CMAKE_CXX_FLAGS "-fno-rtti -fno-exceptions -fno-threadsafe-statics -fno-non-call-exceptions -fno-use-cxa-atexit -march=armv6-m -mcpu=cortex-m0plus -mthumb -Os -fdata-sections -ffunction-sections -Wall -Wextra -Wfatal-errors -Wno-sign-compare -Wno-type-limits -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-value -Wno-strict-aliasing -Wno-maybe-uninitialized")
+SET(CMAKE_C_FLAGS "-march=armv6-m -mcpu=cortex-m0plus -mthumb -Wno-discarded-qualifiers -Wno-ignored-qualifiers -Wno-attributes -march=armv6-m -mcpu=cortex-m0plus -mthumb -Os -fdata-sections -ffunction-sections -Wall -Wextra -Wfatal-errors -Wno-sign-compare -Wno-type-limits -Wno-unused-parameter -Wno-unused-function -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-value -Wno-strict-aliasing -Wno-maybe-uninitialized")
+
+
+if (CMAKE_BUILD_TYPE MATCHES "pico-dap")
+    add_definitions(-DPLATFORMIO=60002)
+    add_definitions(-DNDEBUG)
+    add_definitions(-DPICO_ON_DEVICE=1)
+    add_definitions(-DPICO_HEAP_SIZE=2048)
+    add_definitions(-DPICO_STACK_SIZE=2048)
+    add_definitions(-DBAREMETAL)
+
+    include_directories("${CMAKE_CURRENT_LIST_DIR}/include")
+    include_directories("${CMAKE_CURRENT_LIST_DIR}/src")
+    include_directories("${CMAKE_CURRENT_LIST_DIR}/lib")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/wizio/pico")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/wizio/newlib")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/SDK/include")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/SDK/cmsis/include")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/SDK/boards")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/VFS")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/cmsis-dap")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/fatfs")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/freertos/include")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/freertos/src")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/hal_tft")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/lfs")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/lwip/include")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/lwip/src")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/posix/include")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/posix/src")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/wiring/include")
+    include_directories("$ENV{HOME}/.platformio/packages/framework-wizio-pico/library/wiring/src")
+    include_directories("$ENV{HOME}/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/arm-none-eabi/include/c++/7.2.1")
+    include_directories("$ENV{HOME}/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/arm-none-eabi/include/c++/7.2.1/arm-none-eabi")
+    include_directories("$ENV{HOME}/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/lib/gcc/arm-none-eabi/7.2.1/include")
+    include_directories("$ENV{HOME}/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/lib/gcc/arm-none-eabi/7.2.1/include-fixed")
+    include_directories("$ENV{HOME}/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/arm-none-eabi/include")
+
+    FILE(GLOB_RECURSE EXTRA_LIB_SOURCES
+        ${CMAKE_CURRENT_LIST_DIR}/.pio/libdeps/pico-dap/*.*
+    )
+endif()
+
+
+FILE(GLOB_RECURSE SRC_LIST
+    ${CMAKE_CURRENT_LIST_DIR}/src/*.*
+    ${CMAKE_CURRENT_LIST_DIR}/lib/*.*
+    ${CMAKE_CURRENT_LIST_DIR}/test/*.*
+)
+
+list(APPEND SRC_LIST ${EXTRA_LIB_SOURCES})
