@@ -25,6 +25,7 @@ using namespace std;
 #define FIRMWARE_VERSION     "v0.1"
 
 #define MPU_LED                25
+#define I2C_ID                 i2c1
 #define I2C_SDA                14
 #define I2C_SCL                15
 
@@ -40,6 +41,6 @@ using namespace std;
 #define MOSFET_BUZZER          12
 #define MOSFET_WIFI            2
 
-#define BUZZER                 9
+#define BUZZER                 10
 
 #define POWER_24V_READY

@@ -1,8 +1,7 @@
 #include <main.h>
 #include <condition_variable>
-#include <oled/ssd1306.h>
-#include <oled/textRenderer/TextRenderer.h>
 #include <hardware/i2c.h>
+#include <pthread.h>
 
 ESP8266 wifi(UART_ID);
 
@@ -14,8 +13,7 @@ void initPullups();
 void testGPIO();
 
 void setupWiFiModule();
-void setupBuzzerModule();
-void setupOLED();
+void scanI2CBus();
 
 int main() {
     //Init pico usb
@@ -52,15 +50,25 @@ int main() {
     // Set microcontroller indicator on
     info("Mpu set state to on");
     gpio_put(MPU_LED, true);
+    gpio_put(MOSFET_LCD, true);
+    gpio_put(MOSFET_WIFI, true);
+    sleep_ms(10000);
 
-    // Setup oled display
-    setupOLED();
+    i2c_write_blocking(I2C_ID, 0x7c>>1, reinterpret_cast<const uint8_t *>(0x20 | 0x04), 2, false);
+    sleep_ms(1000);
+    i2c_write_blocking(I2C_ID, 0x7c>>1, reinterpret_cast<const uint8_t *>(0x20 | 0x04), 2, false);
+    sleep_ms(1000);
+    i2c_write_blocking(I2C_ID, 0x7c>>1, reinterpret_cast<const uint8_t *>(0x20 | 0x04), 2, false);
+    sleep_ms(1000);
+    i2c_write_blocking(I2C_ID, 0x7c>>1, reinterpret_cast<const uint8_t *>(0x20 | 0x04), 2, false);
+    uint8_t command = 0x04 | 0x00 | 0x00 | 0x04;
+
+    i2c_write_blocking(I2C_ID, 0x7c>>1, reinterpret_cast<const uint8_t *>(0x20 | command), 2, false);
+
+    scanI2CBus();
 
     info("Wait 15 sec for system startup");
     sleep_ms(15000);
-
-    // Setup buzzer
-    setupBuzzerModule();
 
     // Setup rtc
     info("RTC clock initialization...");
@@ -125,8 +133,8 @@ void initADC() {
     info("Done.");
 }
 void initI2C() {
-    info("I2C register 0 interface initialization...");
-    i2c_init(i2c1, 1000000);
+    info("I2C register interface initialization...");
+    i2c_init(I2C_ID, 1000000);
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SDA);
@@ -154,21 +162,6 @@ void initGPIO() {
 void testGPIO() {
     info("System mosfets/relays self test...");
     sleep_ms(1000);
-    gpio_put(MOSFET_LCD, true);
-    sleep_ms(1000);
-    gpio_put(MOSFET_LCD, false);
-
-    sleep_ms(1000);
-    gpio_put(MOSFET_BUZZER, true);
-    sleep_ms(1000);
-    gpio_put(MOSFET_BUZZER, false);
-
-    sleep_ms(1000);
-    gpio_put(MOSFET_WIFI, true);
-    sleep_ms(1000);
-    gpio_put(MOSFET_WIFI, false);
-
-    sleep_ms(1000);
     gpio_put(RELAY_BAT_0, true);
     sleep_ms(1000);
     gpio_put(RELAY_BAT_0, false);
@@ -195,21 +188,40 @@ void setupWiFiModule() {
     gpio_put(MOSFET_WIFI, true);
     sleep_ms(5000);
     int wifiConnectionTrys = 0;
+    int hardResetAttempts = 0;
     wifi_init:
     // Setup WIFI module
     info("WIFI interface initialization...");
     wifi.detectModule();
     wifi.setMode(Station);
-    bool connected = wifi.connect("kamex", "K229138621");
+    bool connected = wifi.connect("MikroTik-Kamex", "K229138621");
     bool pingSuccessful = wifi.pingIp("8.8.8.8");
     if (!pingSuccessful || !connected) {
         wifiConnectionTrys++;
-        wifi.resetModule();
+        auto success = wifi.resetModule();
+
+        if (!success && hardResetAttempts >= 5) {
+            info("System total failure, waiting for watchdog to reset.");
+            sleep_ms(100000);
+        }
+
+        if (!success) {
+            info("ESP8266 soft reset fail, performing hard reset.");
+            gpio_put(MOSFET_WIFI, false);
+            sleep_ms(4000);
+            gpio_put(MOSFET_WIFI, true);
+            sleep_ms(1500);
+
+            watchdog_update();
+            hardResetAttempts++;
+            goto wifi_init;
+        }
 
         if (wifiConnectionTrys > 5) {
             while (true) {
                 int64_t startTime = get_absolute_time();
                 gpio_put(MOSFET_BUZZER, true);
+                sleep_ms(500);
                 while (true) {
                     gpio_put(BUZZER, !gpio_get(BUZZER));
                     sleep_ms(550);
@@ -225,33 +237,50 @@ void setupWiFiModule() {
         }
         goto wifi_init;
     }
-    gpio_put(MOSFET_WIFI, false);
-}
 
-void setupBuzzerModule() {
-    info("Testing buzzer...");
+    // Signal that wifi works fine
     gpio_put(MOSFET_BUZZER, true);
-    sleep_ms(1500);
-    for (int i = 0; i <= 6; i++) {
-        gpio_put(BUZZER, !gpio_get(MOSFET_BUZZER));
-        sleep_ms(80);
-    }
+    sleep_ms(500);
+    gpio_put(BUZZER, true);
+    sleep_ms(250);
+    gpio_put(BUZZER, false);
+    sleep_ms(250);
+    gpio_put(BUZZER, true);
+    sleep_ms(250);
     gpio_put(BUZZER, false);
     gpio_put(MOSFET_BUZZER, false);
-    info("Done.");
 }
 
-void setupOLED() {
-    info("OLED module initialization...");
-    gpio_put(MOSFET_LCD, true);
-    sleep_ms(5000);
-    auto display = pico_ssd1306::SSD1306(i2c1, 0x3C, pico_ssd1306::Size::W128xH32);
+// I2C reserves some addresses for special purposes. We exclude these from the scan.
+// These are any addresses of the form 000 0xxx or 111 1xxx
+bool reserved_addr(uint8_t addr) {
+    return (addr & 0x78) == 0 || (addr & 0x78) == 0x78;
+}
 
-    display.setOrientation(0);
+void scanI2CBus() {
+    printf("\nI2C Bus Scan\n");
+    printf("   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
 
-    drawText(&display, font_12x16, "PaulekLab", 0 ,0);
-    drawText(&display, font_8x8, "CNCINTERFACE", 0 ,24);
+    for (int addr = 0; addr < (1 << 7); ++addr) {
+        if (addr % 16 == 0) {
+            printf("%02x ", addr);
+        }
 
-    // Send buffer to the display
-    display.sendBuffer();
+        // Perform a 1-byte dummy read from the probe address. If a slave
+        // acknowledges this address, the function returns the number of bytes
+        // transferred. If the address byte is ignored, the function returns
+        // -1.
+
+        // Skip over any reserved addresses.
+        int ret;
+        uint8_t rxdata;
+        if (reserved_addr(addr))
+            ret = PICO_ERROR_GENERIC;
+        else
+            ret = i2c_read_blocking(I2C_ID, addr, &rxdata, 1, false);
+
+        printf(ret < 0 ? "." : "@");
+        printf(addr % 16 == 15 ? "\n" : "  ");
+    }
+    printf("Done.\n");
 }

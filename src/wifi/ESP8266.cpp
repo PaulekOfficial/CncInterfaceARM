@@ -122,7 +122,7 @@ bool ESP8266::resetModule() {
     info("Resetting wifi module...");
     string command = (string) COMMAND_BASE + COMMAND_RESET;
     sendSerialMessage(command, uart_id);
-    bool error = waitUntilSerialOK(100000);
+    bool error = waitUntilSerialOK(10000);
 
     if (!error) {
         info("Reset wifi fail!");
