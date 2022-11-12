@@ -1,39 +1,31 @@
 #include <main.h>
 #include <condition_variable>
 #include <hardware/i2c.h>
-#include <pthread.h>
+#include "lcd/rgb_lcd.h"
 
 ESP8266 wifi(UART_ID);
+rgb_lcd lcd;
 
 void initConfig();
 void initADC();
 void initI2C();
 void initGPIO();
-void initPullups();
+void initPullUps();
 void testGPIO();
+void initLcd();
 
-void setupWiFiModule();
-void scanI2CBus();
+void setupWiFiModule(string ssid, string password);
+
+bool reserved_addr(uint8_t addr) {
+    return (addr & 0x78) == 0 || (addr & 0x78) == 0x78;
+}
 
 int main() {
     //Init pico usb
     stdio_init_all();
     stdio_usb_init();
 
-    // For debug purposes, wait until serial connected
-    //while(!stdio_usb_connected()) {}
-    sleep_ms(10000);
-
     info("USB interface initialization done.");
-
-    //Load config from memory
-    initConfig();
-
-    // Setup spi
-    setupUart();
-
-    // Setup adc
-    initADC();
 
     //Setup used pins
     initGPIO();
@@ -41,38 +33,38 @@ int main() {
     // Setup i2c register 1
     initI2C();
 
+    // Setup spi
+    setupUart();
+
+    // Setup adc
+    initADC();
+
     // Setup pull ups
-    initPullups();
+    initPullUps();
 
     // Self test
     testGPIO();
+
+    //Load config from memory
+    initConfig();
 
     // Set microcontroller indicator on
     info("Mpu set state to on");
     gpio_put(MPU_LED, true);
     gpio_put(MOSFET_LCD, true);
     gpio_put(MOSFET_WIFI, true);
-    sleep_ms(10000);
-
-    i2c_write_blocking(I2C_ID, 0x7c>>1, reinterpret_cast<const uint8_t *>(0x20 | 0x04), 2, false);
     sleep_ms(1000);
-    i2c_write_blocking(I2C_ID, 0x7c>>1, reinterpret_cast<const uint8_t *>(0x20 | 0x04), 2, false);
-    sleep_ms(1000);
-    i2c_write_blocking(I2C_ID, 0x7c>>1, reinterpret_cast<const uint8_t *>(0x20 | 0x04), 2, false);
-    sleep_ms(1000);
-    i2c_write_blocking(I2C_ID, 0x7c>>1, reinterpret_cast<const uint8_t *>(0x20 | 0x04), 2, false);
-    uint8_t command = 0x04 | 0x00 | 0x00 | 0x04;
-
-    i2c_write_blocking(I2C_ID, 0x7c>>1, reinterpret_cast<const uint8_t *>(0x20 | command), 2, false);
-
-    scanI2CBus();
-
-    info("Wait 15 sec for system startup");
-    sleep_ms(15000);
 
     // Setup rtc
     info("RTC clock initialization...");
     rtc_init();
+
+    // Setup lcd
+    initLcd();
+    lcd.sendMessage("PaulekLab Inc.");
+    lcd.setCursor(1, 1);
+    lcd.sendMessage("Kamex Interface");
+    sleep_ms(3000);
 
     // Setup watchdog
     info("Watchdog system initialization...");
@@ -85,7 +77,7 @@ int main() {
     //gpio_put(POWER_24V, true);
 
     // Setup wifi
-    setupWiFiModule();
+    setupWiFiModule("Xiaomi_53E3", "102101281026");
 
     info("Entering main loop.");
     while (true) {
@@ -100,6 +92,11 @@ int main() {
 
         watchdog_update();
     }
+}
+
+void initLcd() {
+    info("Initializing LCD module...");
+    lcd.begin(16, 2, LCD_5x8DOTS, I2C_ID);
 }
 
 void initConfig() {
@@ -134,7 +131,7 @@ void initADC() {
 }
 void initI2C() {
     info("I2C register interface initialization...");
-    i2c_init(I2C_ID, 1000000);
+    i2c_init(I2C_ID, 400000);
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SDA);
@@ -178,13 +175,15 @@ void testGPIO() {
     info("Done.");
 }
 
-void initPullups() {
+void initPullUps() {
     info("Pull ups initialization...");
     gpio_pull_up(BUZZER);
 }
 
-void setupWiFiModule() {
+void setupWiFiModule(string ssid, string password) {
     info("Turining on wifi module");
+    lcd.sendMessages("WIFI", "INITIALIZATION", 1);
+
     gpio_put(MOSFET_WIFI, true);
     sleep_ms(5000);
     int wifiConnectionTrys = 0;
@@ -194,30 +193,57 @@ void setupWiFiModule() {
     info("WIFI interface initialization...");
     wifi.detectModule();
     wifi.setMode(Station);
-    bool connected = wifi.connect("MikroTik-Kamex", "K229138621");
-    bool pingSuccessful = wifi.pingIp("8.8.8.8");
-    if (!pingSuccessful || !connected) {
+
+    lcd.sendMessages("CONNETING WIFI", ssid.data(), 1);
+    sleep_ms(1000);
+
+    bool connected = wifi.connect(ssid, password);
+    if (!connected) {
         wifiConnectionTrys++;
+        info("Connection failed.");
+
+        // Display status
+        lcd.sendMessages("CONNETING WIFI", "Connection failed.", 0);
+
+        // Reset wifi module
         auto success = wifi.resetModule();
+        watchdog_update();
+        sleep_ms(4000);
+        watchdog_update();
+
+        if (wifiConnectionTrys >= 5) {
+            success = false;
+        }
 
         if (!success && hardResetAttempts >= 5) {
             info("System total failure, waiting for watchdog to reset.");
+
+            // Display status
+            lcd.sendMessages("CONNETING WIFI", "Module failure", 0);
+
             sleep_ms(100000);
         }
 
         if (!success) {
             info("ESP8266 soft reset fail, performing hard reset.");
+            lcd.sendMessages("CONNETING WIFI", "Restart wifi mod", 0);
+
             gpio_put(MOSFET_WIFI, false);
             sleep_ms(4000);
             gpio_put(MOSFET_WIFI, true);
             sleep_ms(1500);
 
+
             watchdog_update();
+            sleep_ms(8000);
+            watchdog_update();
+            sleep_ms(8000);
+
             hardResetAttempts++;
             goto wifi_init;
         }
 
-        if (wifiConnectionTrys > 5) {
+        if (wifiConnectionTrys >= 25 || hardResetAttempts >= 5) {
             while (true) {
                 int64_t startTime = get_absolute_time();
                 gpio_put(MOSFET_BUZZER, true);
@@ -237,8 +263,9 @@ void setupWiFiModule() {
         }
         goto wifi_init;
     }
-
     // Signal that wifi works fine
+    lcd.sendMessages("CONNETING WIFI", "SUCCESS", 0);
+
     gpio_put(MOSFET_BUZZER, true);
     sleep_ms(500);
     gpio_put(BUZZER, true);
@@ -249,38 +276,4 @@ void setupWiFiModule() {
     sleep_ms(250);
     gpio_put(BUZZER, false);
     gpio_put(MOSFET_BUZZER, false);
-}
-
-// I2C reserves some addresses for special purposes. We exclude these from the scan.
-// These are any addresses of the form 000 0xxx or 111 1xxx
-bool reserved_addr(uint8_t addr) {
-    return (addr & 0x78) == 0 || (addr & 0x78) == 0x78;
-}
-
-void scanI2CBus() {
-    printf("\nI2C Bus Scan\n");
-    printf("   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
-
-    for (int addr = 0; addr < (1 << 7); ++addr) {
-        if (addr % 16 == 0) {
-            printf("%02x ", addr);
-        }
-
-        // Perform a 1-byte dummy read from the probe address. If a slave
-        // acknowledges this address, the function returns the number of bytes
-        // transferred. If the address byte is ignored, the function returns
-        // -1.
-
-        // Skip over any reserved addresses.
-        int ret;
-        uint8_t rxdata;
-        if (reserved_addr(addr))
-            ret = PICO_ERROR_GENERIC;
-        else
-            ret = i2c_read_blocking(I2C_ID, addr, &rxdata, 1, false);
-
-        printf(ret < 0 ? "." : "@");
-        printf(addr % 16 == 15 ? "\n" : "  ");
-    }
-    printf("Done.\n");
 }

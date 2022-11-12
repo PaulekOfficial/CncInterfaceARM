@@ -27,6 +27,11 @@ void on_uart_rx() {
     }
 }
 
+void clearHistoryBuffer() {
+    historyIndex = 0;
+    messageHistory->clear();
+}
+
 void setupUart() {
     info("UART interface initialization...");
     // Set uart0 pins function
@@ -72,6 +77,12 @@ bool waitUntilSerialOK(uint64_t timeout) {
     while (getLatestSerialMessage() != "OK\r\n") {
         uint64_t now = get_absolute_time();
 
+        watchdog_update();
+
+        if (getLatestSerialMessage() == "FAIL\r\n") {
+            return false;
+        }
+
         if (getLatestSerialMessage() == "ERROR\r\n") {
             return false;
         }
@@ -93,6 +104,12 @@ string waitUntilSerialFirstChar(char ch, uint64_t timeout) {
     while (getLatestSerialMessage().c_str()[0] != ch) {
         uint64_t now = get_absolute_time();
 
+        watchdog_update();
+
+        if (getLatestSerialMessage() == "FAIL\r\n") {
+            return "ERROR";
+        }
+
         if (getLatestSerialMessage() == "ERROR\r\n") {
             return "ERROR";
         }
@@ -113,6 +130,12 @@ string waitUntilSerialStartsWith(string message, uint64_t timeout) {
     while (!getLatestSerialMessage().rfind(message, 0)) {
         uint64_t now = get_absolute_time();
 
+        watchdog_update();
+
+        if (getLatestSerialMessage() == "FAIL\r\n") {
+            return "ERROR";
+        }
+
         if (getLatestSerialMessage() == "ERROR\r\n") {
             return "ERROR";
         }
@@ -132,6 +155,7 @@ bool waitUntilGetSerialMessage(string message, uint64_t timeout) {
     uint64_t startTime = get_absolute_time();
     while (getLatestSerialMessage() != message) {
         uint64_t now = get_absolute_time();
+        watchdog_update();
         if ((startTime + timeout) <= now) {
             return false;
         }
@@ -150,6 +174,12 @@ list<string> collectSerialMessagesTillOK(uint64_t timeout) {
 
     while (getLatestSerialMessage() != "OK\r\n") {
         uint64_t now = get_absolute_time();
+
+        watchdog_update();
+
+        if (getLatestSerialMessage() == "FAIL\r\n") {
+            break;
+        }
 
         if ((startTime + timeout) <= now) {
             return {};

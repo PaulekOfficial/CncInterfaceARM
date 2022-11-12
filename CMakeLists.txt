@@ -13,17 +13,7 @@ if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
     message("Using by default the Release build")
 endif ()
 
-# Apply cmake files for windows platform
-macro(applyWindowsList version)
-    if (WIN32 AND CMAKE_SYSTEM_VERSION)
-        include(CMakeListsPrivateWin.txt)
-        else()
-        include(CMakeListsPrivate.txt)
-    endif()
-endmacro()
-
-applyWindowsList(ver)
-add_definitions(-D_WIN32_WINNT=${ver})
+include(CMakeListsPrivate.txt)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/CMakeListsUser.txt)
 include(CMakeListsUser.txt)
@@ -43,4 +33,4 @@ add_custom_target(
 
 add_executable(Z_DUMMY_TARGET ${SRC_LIST} src/analog/adc_utils.cpp src/config/configuration.cpp src/config/configuration.h
         src/analog/adc_utils.h src/utils/utils.cpp src/utils/utils.h src/wifi/ESP8266.h src/wifi/ESP8266.cpp src/main.h
-        src/wifi/HttpClient.cpp src/wifi/HttpClient.h)
+        src/wifi/HttpClient.cpp src/wifi/HttpClient.h src/lcd/rgb_lcd.cpp src/lcd/rgb_lcd.h)

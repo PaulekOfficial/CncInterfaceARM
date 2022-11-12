@@ -4,6 +4,7 @@ list<string> ESP8266::listNetworks() {
     string command = (string) COMMAND_BASE + COMMAND_LIST_NETWORKS;
     sendSerialMessage(command, uart_id);
     list<string> networks = collectSerialMessagesTillOK(10000);
+    clearBuffer();
     return networks;
 }
 
@@ -31,6 +32,8 @@ ESPIPSettings ESP8266::getIpSettingsESP() {
     replace(ipv6g, "+CIPSTA:ip6gl:", "");
     replace(ipv6g, "\r\n", "");
 
+    clearBuffer();
+
     ESPIPSettings settings;
     settings.ip = ip;
     settings.gateway = gateway;
@@ -57,6 +60,8 @@ CONNECTION_STATUS ESP8266::getConnectionStatus() {
         info("ESP8266 status error");
         return NotConnecting;
     }
+
+    clearBuffer();
 
     switch (status) {
         case 0:
@@ -100,15 +105,18 @@ void ESP8266::setMode(ESP_MODE mode) {
     if(!waitUntilSerialOK(1000)) {
         debug("Failed to set wifi module mode");
     }
+
+    clearBuffer();
 }
 
 void ESP8266::setUARTPort(uart_inst* uart) {
     uart_id = uart;
-};
+}
 
 void ESP8266::detectModule() {
     sendSerialMessage(COMMAND_BASE, uart_id);
     moduleDetected = waitUntilSerialOK(10000);
+    clearBuffer();
     if (!moduleDetected) {
         info("WARNING! No ESP8266 installed.");
     }
@@ -123,7 +131,7 @@ bool ESP8266::resetModule() {
     string command = (string) COMMAND_BASE + COMMAND_RESET;
     sendSerialMessage(command, uart_id);
     bool error = waitUntilSerialOK(10000);
-
+    clearBuffer();
     if (!error) {
         info("Reset wifi fail!");
     }
@@ -140,6 +148,7 @@ bool ESP8266::connect(string name, string pass) {
     string command = (string) COMMAND_BASE + COMMAND_CONNECT_AP + "\"" + ssid + "\"" + "," + "\"" + password + "\"";
     sendSerialMessage(command, uart_id);
     connected = waitUntilSerialOK(100000);
+    clearBuffer();
     if (!connected) {
         info("Failed to connect.");
     }
@@ -166,6 +175,7 @@ int ESP8266::pingIp(string ip) {
         info("Ping ERROR");
         return false;
     }
+    clearBuffer();
 
     info("Ping " + ping + "ms");
 
@@ -208,6 +218,7 @@ int ESP8266::httpGetSize(string url) {
     sendSerialMessage(command, uart_id);
     string size = waitUntilSerialStartsWith("+HTTPGETSIZE:", 10000);
     bool success = waitUntilSerialOK(100000);
+    clearBuffer();
     if (!success) {
         return -1;
     }
@@ -218,26 +229,38 @@ int ESP8266::httpGetSize(string url) {
 bool ESP8266::disconnect() {
     string command = (string) COMMAND_BASE + COMMAND_DISCONNECT_AP;
     sendSerialMessage(command, uart_id);
-    return waitUntilSerialOK(100000);
+    bool errored = waitUntilSerialOK(100000);
+    clearBuffer();
+    return errored;
 }
 
 bool ESP8266::dhcp(bool enable, DHCP_MODE mode) {
     string command = (string) COMMAND_BASE + COMMAND_CONNECT_AP + "\"" + to_string(int(enable)) + "\"" + "," + "\"" +
             to_string(mode) + "\"";
     sendSerialMessage(command, uart_id);
-    return waitUntilSerialOK(100000);
+    bool errored = waitUntilSerialOK(100000);
+    clearBuffer();
+    return errored;
 }
 
 bool ESP8266::autoConnect(bool enable) {
     string command = (string) COMMAND_BASE + COMMAND_AUTOCONNECT + "\"" + to_string(int(enable));
     sendSerialMessage(command, uart_id);
-    return waitUntilSerialOK(100000);
+    bool errored = waitUntilSerialOK(100000);
+    clearBuffer();
+    return errored;
 }
 
 bool ESP8266::staticIp(string ip, string gateway, string netmask, string ipv6Address) {
     string command = (string) COMMAND_BASE + COMMAND_QUERY_SET_IP_ESP + "=" + "\"" + ip + "\"" + "," + "\"" + gateway + "\"" + "," + "\"" + netmask + "\"" + "," + "\"" + ipv6Address + "\"";
     sendSerialMessage(command, uart_id);
-    return waitUntilSerialOK(100000);
+    bool errored = waitUntilSerialOK(100000);
+    clearBuffer();
+    return errored;
+}
+
+void ESP8266::clearBuffer() {
+    clearHistoryBuffer();
 }
 
 ESPIPSettings ESP8266::getAddress() {

@@ -49,6 +49,8 @@ private:
 
     list<string> listNetworks();
     ESPIPSettings getIpSettingsESP();
+    static void clearBuffer();
+
 public:
     explicit ESP8266(uart_inst* uart);
 
