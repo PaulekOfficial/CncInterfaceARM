@@ -3,6 +3,7 @@
 
 #endif //CNCSMARTINTERFACE_MAIN_H
 
+#include <stdlib.h>
 #include <pico/stdlib.h>
 #include <string>
 #include <cstring>
@@ -15,10 +16,14 @@
 #include <pico/stdio_usb.h>
 #include <hardware/regs/intctrl.h>
 #include <hardware/irq.h>
-#include <wifi/ESP8266.h>
-#include <utils/utils.h>
 #include <config/configuration.h>
 #include <analog/adc_utils.h>
+#include <lcd/rgb_lcd.h>
+#include <condition_variable>
+#include <hardware/i2c.h>
+#include <wifi/ESP8266.h>
+#include <utils/utils.h>
+#include "sleep/sleep.h"
 
 using namespace std;
 
@@ -29,9 +34,8 @@ using namespace std;
 #define I2C_SDA                14
 #define I2C_SCL                15
 
-#define ADC_SYSTEM_BATTERY     28
-#define ADC_EXTERNAL_BATTERY_0 27
-#define ADC_EXTERNAL_BATTERY_1 16
+#define ADC_SYSTEM_BATTERY     27
+#define ADC_EXTERNAL_BATTERY   26
 
 #define RELAY_POWER_24V        11
 #define RELAY_BAT_0            17
@@ -42,5 +46,29 @@ using namespace std;
 #define MOSFET_WIFI            2
 
 #define BUZZER                 10
+#define BUTTON                 19
 
-#define POWER_24V_READY
+#define POWER_24V_READY         7
+
+uint scb_orig;
+uint clock0_orig;
+uint clock1_orig;
+
+ESP8266 wifi(UART_ID);
+rgb_lcd lcd;
+
+bool alarm = false;
+
+void loop();
+void initConfig();
+void initADC();
+void initI2C();
+void initGPIO();
+void initPullUps();
+void initLcd();
+void shutdown();
+void awake();
+void setupAlarm();
+
+void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage1, double internalBattery, bool highVoltagePresent);
+void setupWiFiModule(string ssid, string password);

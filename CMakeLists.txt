@@ -33,4 +33,5 @@ add_custom_target(
 
 add_executable(Z_DUMMY_TARGET ${SRC_LIST} src/analog/adc_utils.cpp src/config/configuration.cpp src/config/configuration.h
         src/analog/adc_utils.h src/utils/utils.cpp src/utils/utils.h src/wifi/ESP8266.h src/wifi/ESP8266.cpp src/main.h
-        src/wifi/HttpClient.cpp src/wifi/HttpClient.h src/lcd/rgb_lcd.cpp src/lcd/rgb_lcd.h)
+        src/wifi/HttpClient.cpp src/wifi/HttpClient.h src/lcd/rgb_lcd.cpp
+        src/lcd/rgb_lcd.h src/sleep/sleep.h src/sleep/sleep.c src/hardware/rosc.c src/hardware/rosc.h)

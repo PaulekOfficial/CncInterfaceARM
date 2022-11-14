@@ -6,6 +6,6 @@
 #include <pico/stdlib.h>
 #include <hardware/adc.h>
 
-float readBatteryVoltage(int batteryMosfet, float r1, float r2);
-float readInternalBatteryVoltage(float r1, float r2);
+double readBatteryVoltage(int batteryMosfet);
+double readInternalBatteryVoltage();
 float readInternalTemperature();

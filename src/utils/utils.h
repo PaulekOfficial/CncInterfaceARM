@@ -35,3 +35,4 @@ list<string> collectSerialMessagesTillOK(uint64_t timeout);
 bool replace(std::string& str, const std::string& from, const std::string& to);
 void replaceAll(std::string& str, const std::string& from, const std::string& to);
 void clearHistoryBuffer();
+float round(float var);

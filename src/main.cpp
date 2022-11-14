@@ -1,23 +1,9 @@
 #include <main.h>
-#include <condition_variable>
-#include <hardware/i2c.h>
-#include "lcd/rgb_lcd.h"
+#include <hardware/structs/scb.h>
+#include <hardware/structs/clocks.h>
 
-ESP8266 wifi(UART_ID);
-rgb_lcd lcd;
-
-void initConfig();
-void initADC();
-void initI2C();
-void initGPIO();
-void initPullUps();
-void testGPIO();
-void initLcd();
-
-void setupWiFiModule(string ssid, string password);
-
-bool reserved_addr(uint8_t addr) {
-    return (addr & 0x78) == 0 || (addr & 0x78) == 0x78;
+static void alarm_callback() {
+    alarm = true;
 }
 
 int main() {
@@ -42,9 +28,6 @@ int main() {
     // Setup pull ups
     initPullUps();
 
-    // Self test
-    testGPIO();
-
     //Load config from memory
     initConfig();
 
@@ -53,7 +36,6 @@ int main() {
     gpio_put(MPU_LED, true);
     gpio_put(MOSFET_LCD, true);
     gpio_put(MOSFET_WIFI, true);
-    sleep_ms(1000);
 
     // Setup rtc
     info("RTC clock initialization...");
@@ -64,34 +46,133 @@ int main() {
     lcd.sendMessage("PaulekLab Inc.");
     lcd.setCursor(1, 1);
     lcd.sendMessage("Kamex Interface");
-    sleep_ms(3000);
+    busy_wait_ms(1000);
+
+    // Save clock speed
+    scb_orig = scb_hw->scr;
+    clock0_orig = clocks_hw->sleep_en0;
+    clock1_orig = clocks_hw->sleep_en1;
+
 
     // Setup watchdog
     info("Watchdog system initialization...");
-    watchdog_enable(9 * 1000, true);
+    //watchdog_enable(9 * 1000, false);
     if(watchdog_caused_reboot()) {
         info("ALERT!!! System rebooted by watchdog, investigation required.");
     }
-
     watchdog_update();
-    //gpio_put(POWER_24V, true);
 
     // Setup wifi
-    setupWiFiModule("Xiaomi_53E3", "102101281026");
+    //setupWiFiModule("Xiaomi_53E3", "102101281026");
 
+    loop();
+}
+
+void loop()
+{
     info("Entering main loop.");
     while (true) {
-        sleep_ms(3000);
+        watchdog_update();
 
-//        info(to_string((int)wifi.getConnectionStatus()));
-//
-//        float internalVoltage = readInternalBatteryVoltage(configuration.internal_r1, configuration.internal_r2);
-//        float voltage = readBatteryVoltage(BATTERY_MOSFET, configuration.r1, configuration.r2);
-//        float temperature = readInternalTemperature();
+        lcd.sendMessages("Obliczanie", "prosze czekac...", 1);
 
+        double internalVoltage = readInternalBatteryVoltage();
+        info("Internal voltage: " + to_string(internalVoltage));
+        watchdog_update();
+
+        double batteryVoltage0 = readBatteryVoltage(RELAY_BAT_0);
+        info("Battery0 voltage: " + to_string(batteryVoltage0));
+        watchdog_update();
+
+        double batteryVoltage1 = readBatteryVoltage(RELAY_BAT_1);
+        info("Battery1 voltage: " + to_string(batteryVoltage1));
+        watchdog_update();
+
+        float temperature = readInternalTemperature();
+        bool highVoltagePresent = gpio_get(POWER_24V_READY);
+        watchdog_update();
+
+        writeInfo(temperature, batteryVoltage0, batteryVoltage1, internalVoltage, highVoltagePresent);
+        if (!highVoltagePresent) {
+            lcd.sendMessages("Brak zasilania", "Tryb uspienia...", 0);
+            shutdown();
+
+            sleep_run_from_rosc();
+            setupAlarm();
+
+            while (true) {
+                bool buttonPressed = gpio_get(BUTTON);
+                if (buttonPressed || alarm) {
+                    awake();
+
+                    alarm = false;
+                    rtc_disable_alarm();
+                    break;
+                }
+
+                watchdog_update();
+            }
+        }
 
         watchdog_update();
     }
+}
+
+void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage1, double internalBattery, bool highVoltagePresent) {
+    char title[32];
+    sprintf(title, "Temp: %2.2f C", temperature);
+
+    char subtitle[32];
+    sprintf(subtitle, "VBAT:%2.2fV", internalBattery);
+
+    lcd.sendMessages(title, subtitle, 0);
+    busy_wait_ms(2000);
+    sprintf(subtitle, "Bateria 0: %2.2fV", batteryVoltage0);
+    lcd.sendMessages(title, subtitle, 0);
+
+    busy_wait_ms(2000);
+    sprintf(subtitle, "Bateria 1: %2.2fV", batteryVoltage1);
+    lcd.sendMessages(title, subtitle, 0);
+    busy_wait_ms(2000);
+
+    if (highVoltagePresent) {
+        sprintf(subtitle, "Zasilanie 24V");
+    } else {
+        sprintf(subtitle, "Brak 24V");
+    }
+
+    lcd.sendMessages(title, subtitle, 0);
+    busy_wait_ms(2000);
+}
+
+void awake() {
+    gpio_put(MPU_LED, true);
+    gpio_put(MOSFET_WIFI, true);
+    gpio_put(MOSFET_LCD, true);
+
+    // Setup lcd
+    initLcd();
+    lcd.display();
+    lcd.sendMessages("Wybudzanie", "prosze czekac...", 1);
+
+    busy_wait_ms(1000);
+    lcd.sendMessages("System clock", "awakeing...", 1);
+    recover_from_sleep(scb_orig, clock0_orig, clock1_orig);
+
+    // Setup wifi
+    //setupWiFiModule("Xiaomi_53E3", "102101281026");
+}
+
+void shutdown() {
+    info("Shutting down...");
+    gpio_put(RELAY_BAT_0, false);
+    gpio_put(RELAY_BAT_1, false);
+    gpio_put(RELAY_POWER_24V, false);
+    gpio_put(MOSFET_BUZZER, false);
+    gpio_put(MOSFET_WIFI, false);
+    busy_wait_ms(1500);
+    gpio_put(MOSFET_LCD, false);
+    gpio_put(MPU_LED, false);
 }
 
 void initLcd() {
@@ -123,10 +204,10 @@ void initConfig() {
 void initADC() {
     info("ADC interface initialization...");
     adc_init();
+
     adc_set_temp_sensor_enabled(true);
     adc_gpio_init(ADC_SYSTEM_BATTERY);
-    adc_gpio_init(ADC_EXTERNAL_BATTERY_0);
-    adc_gpio_init(ADC_EXTERNAL_BATTERY_1);
+    adc_gpio_init(ADC_EXTERNAL_BATTERY);
     info("Done.");
 }
 void initI2C() {
@@ -158,19 +239,19 @@ void initGPIO() {
 }
 void testGPIO() {
     info("System mosfets/relays self test...");
-    sleep_ms(1000);
+    busy_wait_ms(1000);
     gpio_put(RELAY_BAT_0, true);
-    sleep_ms(1000);
+    busy_wait_ms(1000);
     gpio_put(RELAY_BAT_0, false);
 
-    sleep_ms(1000);
+    busy_wait_ms(1000);
     gpio_put(RELAY_BAT_1, true);
-    sleep_ms(1000);
+    busy_wait_ms(1000);
     gpio_put(RELAY_BAT_1, false);
 
-    sleep_ms(1000);
+    busy_wait_ms(1000);
     gpio_put(RELAY_POWER_24V, true);
-    sleep_ms(1000);
+    busy_wait_ms(1000);
     gpio_put(RELAY_POWER_24V, false);
     info("Done.");
 }
@@ -185,7 +266,7 @@ void setupWiFiModule(string ssid, string password) {
     lcd.sendMessages("WIFI", "INITIALIZATION", 1);
 
     gpio_put(MOSFET_WIFI, true);
-    sleep_ms(5000);
+    busy_wait_ms(5000);
     int wifiConnectionTrys = 0;
     int hardResetAttempts = 0;
     wifi_init:
@@ -194,8 +275,8 @@ void setupWiFiModule(string ssid, string password) {
     wifi.detectModule();
     wifi.setMode(Station);
 
-    lcd.sendMessages("CONNETING WIFI", ssid.data(), 1);
-    sleep_ms(1000);
+    lcd.sendMessages("Laczenie z wifi", ssid.data(), 1);
+    busy_wait_ms(1000);
 
     bool connected = wifi.connect(ssid, password);
     if (!connected) {
@@ -203,12 +284,12 @@ void setupWiFiModule(string ssid, string password) {
         info("Connection failed.");
 
         // Display status
-        lcd.sendMessages("CONNETING WIFI", "Connection failed.", 0);
+        lcd.sendMessages("Laczenie z wifi", "Blad polaczenia", 0);
 
         // Reset wifi module
         auto success = wifi.resetModule();
         watchdog_update();
-        sleep_ms(4000);
+        busy_wait_ms(4000);
         watchdog_update();
 
         if (wifiConnectionTrys >= 5) {
@@ -219,25 +300,25 @@ void setupWiFiModule(string ssid, string password) {
             info("System total failure, waiting for watchdog to reset.");
 
             // Display status
-            lcd.sendMessages("CONNETING WIFI", "Module failure", 0);
+            lcd.sendMessages("Laczenie z wifi", "Blad modulu", 0);
 
-            sleep_ms(100000);
+            busy_wait_ms(100000);
         }
 
         if (!success) {
             info("ESP8266 soft reset fail, performing hard reset.");
-            lcd.sendMessages("CONNETING WIFI", "Restart wifi mod", 0);
+            lcd.sendMessages("ERROR C:004", "Restart modulu", 0);
 
             gpio_put(MOSFET_WIFI, false);
-            sleep_ms(4000);
+            busy_wait_ms(4000);
             gpio_put(MOSFET_WIFI, true);
-            sleep_ms(1500);
+            busy_wait_ms(1500);
 
 
             watchdog_update();
-            sleep_ms(8000);
+            busy_wait_ms(8000);
             watchdog_update();
-            sleep_ms(8000);
+            busy_wait_ms(8000);
 
             hardResetAttempts++;
             goto wifi_init;
@@ -247,10 +328,10 @@ void setupWiFiModule(string ssid, string password) {
             while (true) {
                 int64_t startTime = get_absolute_time();
                 gpio_put(MOSFET_BUZZER, true);
-                sleep_ms(500);
+                busy_wait_ms(500);
                 while (true) {
                     gpio_put(BUZZER, !gpio_get(BUZZER));
-                    sleep_ms(550);
+                    busy_wait_ms(550);
 
                     uint64_t now = get_absolute_time();
 
@@ -267,13 +348,44 @@ void setupWiFiModule(string ssid, string password) {
     lcd.sendMessages("CONNETING WIFI", "SUCCESS", 0);
 
     gpio_put(MOSFET_BUZZER, true);
-    sleep_ms(500);
+    busy_wait_ms(500);
     gpio_put(BUZZER, true);
-    sleep_ms(250);
+    busy_wait_ms(250);
     gpio_put(BUZZER, false);
-    sleep_ms(250);
+    busy_wait_ms(250);
     gpio_put(BUZZER, true);
-    sleep_ms(250);
+    busy_wait_ms(250);
     gpio_put(BUZZER, false);
     gpio_put(MOSFET_BUZZER, false);
+}
+
+void setupAlarm() {
+    printf("RTC Alarm Repeat!\n");
+
+    // Start on Wednesday 13th January 2021 11:20:00
+    datetime_t t = {
+            .year  = 2020,
+            .month = 01,
+            .day   = 13,
+            .dotw  = 3, // 0 is Sunday, so 3 is Wednesday
+            .hour  = 11,
+            .min   = 20,
+            .sec   = 00
+    };
+
+    // Setup the RTC
+    rtc_set_datetime(&t);
+
+    // Alarm time
+    datetime_t alarm = {
+            .year  = 2020,
+            .month = 01,
+            .day   = 13,
+            .dotw  = 3, // 0 is Sunday, so 3 is Wednesday
+            .hour  = 11,
+            .min   = 50,
+            .sec   = 00
+    };
+
+    rtc_set_alarm(&alarm, &alarm_callback);
 }

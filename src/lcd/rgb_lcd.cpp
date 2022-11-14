@@ -1,6 +1,3 @@
-#include <string.h>
-#include <hardware/i2c.h>
-
 #include "rgb_lcd.h"
 
 void rgb_lcd::i2c_send_byte(unsigned char dta) {
@@ -38,7 +35,7 @@ void rgb_lcd::begin(uint8_t cols, uint8_t lines, uint8_t dotsize, i2c_inst_t *i2
     // SEE PAGE 45/46 FOR INITIALIZATION SPECIFICATION!
     // according to datasheet, we need at least 40ms after power rises above 2.7V
     // before sending commands. Arduino can turn on way befer 4.5V so we'll wait 50
-    sleep_ms(50);
+    busy_wait_ms(500);
 
 
     // this is according to the hitachi HD44780 datasheet
@@ -46,11 +43,11 @@ void rgb_lcd::begin(uint8_t cols, uint8_t lines, uint8_t dotsize, i2c_inst_t *i2
 
     // Send function set command sequence
     command(LCD_FUNCTIONSET | _displayfunction);
-    sleep_ms(5);  // wait more than 4.1ms
+    busy_wait_ms(4);  // wait more than 4.1ms
 
     // second try
     command(LCD_FUNCTIONSET | _displayfunction);
-    sleep_ms(2);
+    busy_wait_ms(1);
 
     // third go
     command(LCD_FUNCTIONSET | _displayfunction);
@@ -77,7 +74,7 @@ void rgb_lcd::begin(uint8_t cols, uint8_t lines, uint8_t dotsize, i2c_inst_t *i2
 //    {
 //        rgb_chip_addr = RGB_ADDRESS_V5;
 //        setReg(0x00, 0x07); // reset the chip
-//        sleep_ms(200); // wait 200 us to complete
+//        busy_wait_ms(200); // wait 200 us to complete
 //        setReg(0x04, 0x15); // set all led always on
 //    }
 //    else
@@ -98,12 +95,12 @@ void rgb_lcd::begin(uint8_t cols, uint8_t lines, uint8_t dotsize, i2c_inst_t *i2
 /********** high level commands, for the user! */
 void rgb_lcd::clear() {
     command(LCD_CLEARDISPLAY);        // clear display, set cursor position to zero
-    sleep_ms(20);          // this command takes a long time!
+    busy_wait_ms(20);          // this command takes a long time!
 }
 
 void rgb_lcd::home() {
     command(LCD_RETURNHOME);        // set cursor position to zero
-    sleep_ms(20);        // this command takes a long time!
+    busy_wait_ms(20);        // this command takes a long time!
 }
 
 void rgb_lcd::setCursor(uint8_t col, uint8_t row) {
@@ -249,7 +246,7 @@ void rgb_lcd::sendMessage(char message[]) {
     for (int i = 0; i < stringLen; i++)
     {
         write(message[i]);
-        sleep_ms(5);
+        busy_wait_ms(5);
     }
 }
 

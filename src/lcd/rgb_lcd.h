@@ -1,6 +1,9 @@
 #ifndef __RGB_LCD_H__
 #define __RGB_LCD_H__
 
+#include <string.h>
+#include <hardware/i2c.h>
+
 // Device I2C Arress
 #define LCD_ADDRESS     (0x3E)
 #define RGB_ADDRESS     (0xc4>>1)
