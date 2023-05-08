@@ -1,0 +1,13 @@
+# Target labels
+ PioasmBuild
+# Source files and their labels
+F:/CLionProjects/interface-pico/cmake-build-release/pico-sdk/src/rp2_common/tinyusb/CMakeFiles/PioasmBuild
+F:/CLionProjects/interface-pico/cmake-build-release/pico-sdk/src/rp2_common/tinyusb/CMakeFiles/PioasmBuild.rule
+F:/CLionProjects/interface-pico/cmake-build-release/pico-sdk/src/rp2_common/tinyusb/CMakeFiles/PioasmBuild-complete.rule
+F:/CLionProjects/interface-pico/cmake-build-release/pico-sdk/src/rp2_common/tinyusb/pioasm/src/PioasmBuild-stamp/PioasmBuild-build.rule
+F:/CLionProjects/interface-pico/cmake-build-release/pico-sdk/src/rp2_common/tinyusb/pioasm/src/PioasmBuild-stamp/PioasmBuild-configure.rule
+F:/CLionProjects/interface-pico/cmake-build-release/pico-sdk/src/rp2_common/tinyusb/pioasm/src/PioasmBuild-stamp/PioasmBuild-download.rule
+F:/CLionProjects/interface-pico/cmake-build-release/pico-sdk/src/rp2_common/tinyusb/pioasm/src/PioasmBuild-stamp/PioasmBuild-install.rule
+F:/CLionProjects/interface-pico/cmake-build-release/pico-sdk/src/rp2_common/tinyusb/pioasm/src/PioasmBuild-stamp/PioasmBuild-mkdir.rule
+F:/CLionProjects/interface-pico/cmake-build-release/pico-sdk/src/rp2_common/tinyusb/pioasm/src/PioasmBuild-stamp/PioasmBuild-patch.rule
+F:/CLionProjects/interface-pico/cmake-build-release/pico-sdk/src/rp2_common/tinyusb/pioasm/src/PioasmBuild-stamp/PioasmBuild-update.rule

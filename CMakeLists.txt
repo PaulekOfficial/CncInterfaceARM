@@ -1,37 +1,62 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.24)
 
-# Include the Raspberry Pi Pico SDK import script
-include("pico_sdk_import.cmake")
+# initialize pico-sdk from GIT
+# (note this can come from environment, CMake cache etc)
+set(PICO_SDK_FETCH_FROM_GIT on)
 
-project("CncSmartInterface" C CXX ASM)
+# Pull in SDK (must be before project)
+include(pico_sdk_import.cmake)
+
+project(interface_pico C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
+set(PICO_BOARD pico_w)
 
-# Set default build type to Release
-if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
-    message("Using by default the Release build")
-endif ()
-
-include(CMakeListsPrivate.txt)
-
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/CMakeListsUser.txt)
-include(CMakeListsUser.txt)
+if (PICO_SDK_VERSION_STRING VERSION_LESS "1.3.0")
+    message(FATAL_ERROR "Raspberry Pi Pico SDK version 1.3.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
 endif()
 
-add_custom_target(
-    Production ALL
-    COMMAND platformio -c clion run "$<$<NOT:$<CONFIG:All>>:-e${CMAKE_BUILD_TYPE}>"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
+# Initialize the SDK
+pico_sdk_init()
 
-add_custom_target(
-    Debug ALL
-    COMMAND platformio -c clion debug "$<$<NOT:$<CONFIG:All>>:-e${CMAKE_BUILD_TYPE}>"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
+add_compile_options(-Wall
+        -Wno-format          # int != int32_t as far as the compiler is concerned because gcc has int32_t as long int
+        -Wno-unused-function # we have some for the docs that aren't called
+        -Wno-maybe-uninitialized
+        )
 
-add_executable(Z_DUMMY_TARGET ${SRC_LIST} src/analog/adc_utils.cpp src/config/configuration.cpp src/config/configuration.h
-        src/analog/adc_utils.h src/utils/utils.cpp src/utils/utils.h src/wifi/ESP8266.h src/wifi/ESP8266.cpp src/main.h
-        src/wifi/HttpClient.cpp src/wifi/HttpClient.h src/lcd/rgb_lcd.cpp
-        src/lcd/rgb_lcd.h src/sleep/sleep.h src/sleep/sleep.c src/hardware/rosc.c src/hardware/rosc.h)
+#add_executable(interface_pico main.cpp)
+add_executable(interface_pico ${SRC_LIST} lwipopts.h
+        analog/adc_utils.cpp
+        analog/adc_utils.h utils/utils.cpp
+        main.h main.cpp
+        oled/oled_display.cpp oled/oled_display.h oled/font.h
+        sleep/sleep.h sleep/sleep.c hardware/rosc.c hardware/rosc.h wifi/tls_client.cpp wifi/tls_client.h mbedtls_config.h)
+
+target_include_directories(interface_pico PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/.. # for our common lwipopts
+        )
+
+target_link_libraries(interface_pico
+        pico_stdlib
+        pico_stdio_usb
+        pico_cyw43_arch_lwip_threadsafe_background
+        pico_lwip_mbedtls
+        pico_mbedtls
+        pico_multicore
+        hardware_pwm
+        hardware_adc
+        hardware_spi
+        hardware_i2c
+        hardware_flash
+        hardware_clocks
+        hardware_rtc
+        )
+
+# enable usb output, disable uart output
+pico_enable_stdio_usb(interface_pico 1)
+pico_enable_stdio_uart(interface_pico 0)
+
+# create map/bin/hex file etc.
+pico_add_extra_outputs(interface_pico)
