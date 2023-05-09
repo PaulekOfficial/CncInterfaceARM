@@ -66,6 +66,7 @@ int main() {
     cyw43_arch_gpio_put(MPU_LED, true);
 
     disp.init(128, 32, 0x3C, I2C_ID);
+    disp.poweron();
 
     disp.clear();
     disp.bmp_show_image(__paulek_bmp_data, 1086);
@@ -83,6 +84,10 @@ int main() {
     scb_orig = scb_hw->scr;
     clock0_orig = clocks_hw->sleep_en0;
     clock1_orig = clocks_hw->sleep_en1;
+
+    printf("scb clock: %u \r\n", scb_orig);
+    printf("clock0 clock: %u \r\n", clock0_orig);
+    printf("clock1 clock: %u \r\n", clock1_orig);
 
     // Setup watchdog
     info("Watchdog system initialization...");
@@ -184,26 +189,30 @@ void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage
 }
 
 void awake() {
+    watchdog_update();
+
+    disp.init(128, 32, 0x3C, I2C_ID);
+    disp.poweron();
+
+    disp.clear();
+    disp.draw_string(10, 10, 1, "Waking up...");
+    disp.show();
+
+    watchdog_enable(9 * 1000, false);
+    watchdog_update();
+    recover_from_sleep(0, 4294967295, 32767);
+    watchdog_update();
+
     info("WiFi infineon 43439 reinitializing...");
     if (cyw43_arch_init()) {
         info("WiFi init failed, killing process...");
         return;
     }
     info("Done.");
-
     cyw43_arch_gpio_put(MPU_LED, true);
-    watchdog_update();
-
-    busy_wait_ms(1000);
-    watchdog_update();
-    recover_from_sleep(scb_orig, clock0_orig, clock1_orig);
-    watchdog_update();
 
     // Setup wifi
     setupWiFiModule("Xiaomi_52E3", "102101281026");
-
-    // Setup wifi
-    //setupWiFiModule("Xiaomi_53E3", "102101281026");
 }
 
 void shutdown() {
@@ -212,6 +221,7 @@ void shutdown() {
     gpio_put(RELAY_BAT_1, false);
     gpio_put(RELAY_POWER_24V, false);
     gpio_put(MOSFET_BUZZER, false);
+    disp.poweroff();
     disp.deinit();
 
     watchdog_update();
