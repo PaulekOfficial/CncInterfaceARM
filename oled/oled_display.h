@@ -61,7 +61,7 @@ private:
                 printf("[%s] timeout!\n", name);
                 break;
             default:
-                printf("[%s] wrote successfully %lu bytes!\n", name, len);
+                //printf("[%s] wrote successfully %lu bytes!\n", name, len);
                 break;
         }
     }

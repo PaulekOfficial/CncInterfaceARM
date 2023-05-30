@@ -6,6 +6,10 @@
 #include <hardware/regs/intctrl.h>
 #include <hardware/irq.h>
 #include <hardware/watchdog.h>
+#include "pin_mapping.h"
+#include "hardware/adc.h"
+#include "hardware/pwm.h"
+#include <hardware/i2c.h>
 
 using namespace std;
 
@@ -35,4 +39,10 @@ list<string> collectSerialMessagesTillOK(uint64_t timeout);
 bool replace(std::string& str, const std::string& from, const std::string& to);
 void replaceAll(std::string& str, const std::string& from, const std::string& to);
 void clearHistoryBuffer();
+
+void initADC();
+void initI2C();
+void initGPIO();
+void initPullUps();
+
 //float round(float var);

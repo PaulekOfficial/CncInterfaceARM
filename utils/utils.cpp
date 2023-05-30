@@ -259,3 +259,54 @@ float round(float var)
     return (float)value / 100;
 }
 
+void initADC() {
+    info("ADC interface initialization...");
+    adc_init();
+
+    adc_set_temp_sensor_enabled(true);
+    adc_gpio_init(ADC_SYSTEM_BATTERY);
+    adc_gpio_init(ADC_EXTERNAL_BATTERY);
+    info("Done.");
+}
+void initI2C() {
+    info("I2C register interface initialization...");
+    i2c_init(I2C_ID, 400 * 1000);
+    info("setting gpio i2c functions");
+    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
+    info("activating internal pullup's");
+    gpio_pull_up(I2C_SDA);
+    gpio_pull_up(I2C_SCL);
+}
+void initGPIO() {
+    info("GPIO interface initialization...");
+    gpio_init(RELAY_POWER_24V);
+    gpio_init(RELAY_BAT_0);
+    gpio_init(RELAY_BAT_1);
+    gpio_init(MOSFET_BUZZER);
+    gpio_init(MOSFET_LCD);
+    //gpio_set_function(MPU_LED, GPIO_FUNC_PWM);
+
+    // Setup pwm
+    uint slice_num = pwm_gpio_to_slice_num(MPU_LED);
+    pwm_config config = pwm_get_default_config();
+    // Set divider, reduces counter clock to sysclock/this value
+    pwm_config_set_clkdiv(&config, 4.f);
+    // Load the configuration into our PWM slice, and set it running.
+    pwm_init(slice_num, &config, true);
+
+    gpio_init(BUZZER);
+    gpio_set_dir(RELAY_POWER_24V, GPIO_OUT);
+    gpio_set_dir(RELAY_BAT_0, GPIO_OUT);
+    gpio_set_dir(RELAY_BAT_1, GPIO_OUT);
+    gpio_set_dir(MOSFET_BUZZER, GPIO_OUT);
+    gpio_set_dir(MOSFET_LCD, GPIO_OUT);
+    //gpio_set_dir(MPU_LED, GPIO_OUT);
+    gpio_set_dir(BUZZER, GPIO_OUT);
+}
+
+void initPullUps() {
+    info("Pull ups initialization...");
+    gpio_pull_up(BUZZER);
+}
+

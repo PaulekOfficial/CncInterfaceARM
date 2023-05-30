@@ -1,12 +1,15 @@
 #include "main.h"
 
+
+//TODO DEBUG GPIO 5-2
+
 static void alarm_callback() {
     wakeUp = true;
 }
 
 void core1_entry() {
     while (true) {
-        if (wifiConnecting) {
+        if (wifi_manager.connecting()) {
             disp.clear();
             disp.bmp_show_image_with_offset(__wifi_bmp_data, 226, 5, 5);
 
@@ -96,7 +99,17 @@ int main() {
     watchdog_update();
 
     // Setup wifi
-    setupWiFiModule("Xiaomi_52E3", "102101281026");
+    wifi_manager.set_network("PaulekLab", "12345678");
+    wifi_manager.connect();
+
+    if (wifi_manager.connected() == 0) {
+        disp.clear();
+        disp.bmp_show_image_with_offset(__wifi_bmp_data, 226, 5, 5);
+        disp.draw_string(50, 13, 1, "Connected!");
+        disp.show();
+
+        busy_wait_ms(2000);
+    }
 
     loop();
 }
@@ -107,6 +120,10 @@ void loop()
     while (true)
     {
         watchdog_update();
+
+        disp.clear();
+        disp.draw_string(10, 10, 2, "WAIT");
+        disp.show();
 
         batteryVoltage = readInternalBatteryVoltage();
         info("Internal voltage: " + to_string(batteryVoltage));
@@ -124,7 +141,19 @@ void loop()
         bool highVoltagePresent = gpio_get(POWER_24V_READY);
         watchdog_update();
 
-        if (batteryVoltage >= 2.5) writeInfo(temperature, batteryVoltage0, batteryVoltage1, batteryVoltage, highVoltagePresent);
+        disp.clear();
+        disp.draw_string(10, 10, 2, "PACKAGE");
+        disp.show();
+
+        SimpleRequestBuilder simpleRequest(batteryVoltage0, batteryVoltage1, "battery");
+
+        disp.clear();
+        disp.draw_string(10, 10, 2, "SEND");
+        disp.show();
+
+        wifi_manager.http_request("api.pauleklab.com", simpleRequest.getUrl());
+
+        writeInfo(temperature, batteryVoltage0, batteryVoltage1, batteryVoltage, highVoltagePresent);
         if (!highVoltagePresent)
         {
             watchdog_update();
@@ -156,36 +185,47 @@ void loop()
 }
 
 void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage1, double internalBattery, bool highVoltagePresent) {
-//    char title[32];
-//    sprintf(title, "Temp: %2.2f C", temperature);
-//
-//    char subtitle[32];
-//    sprintf(subtitle, "VBAT:%2.2fV", internalBattery);
-//    watchdog_update();
-//
-//    lcd.sendMessages(title, subtitle, 0);
-//    busy_wait_ms(2000);
-//    sprintf(subtitle, "Bateria 0: %2.2fV", batteryVoltage0);
-//    lcd.sendMessages(title, subtitle, 0);
-//    watchdog_update();
-//
-//    busy_wait_ms(2000);
-//    sprintf(subtitle, "Bateria 1: %2.2fV", batteryVoltage1);
-//    lcd.sendMessages(title, subtitle, 0);
-//    watchdog_update();
-//    busy_wait_ms(2000);
-//    watchdog_update();
-//
-//    if (highVoltagePresent) {
-//        sprintf(subtitle, "Zasilanie 24V");
-//    } else {
-//        sprintf(subtitle, "Brak 24V");
-//    }
-//
-//    lcd.sendMessages(title, subtitle, 0);
-//    watchdog_update();
-//    busy_wait_ms(2000);
-//    watchdog_update();
+    char title[32];
+    sprintf(title, "%2.2fC", temperature);
+
+    char subtitle[32];
+    char subtitle2[32];
+    char subtitle3[32];
+    sprintf(subtitle, "VBAT:%2.2fV", internalBattery);
+    watchdog_update();
+
+    busy_wait_ms(2000);
+    sprintf(subtitle2, "Bateria 0: %2.2fV", batteryVoltage0);
+
+    busy_wait_ms(2000);
+    sprintf(subtitle3, "Bateria 1: %2.2fV", batteryVoltage1);
+
+    disp.clear();
+    disp.draw_string(90, 0, 1, title);
+    disp.draw_string(0, 0, 1, subtitle);
+    disp.draw_string(0, 10, 1, subtitle2);
+    disp.draw_string(0, 20, 1, subtitle3);
+    disp.show();
+
+    watchdog_update();
+    busy_wait_ms(8000);
+    watchdog_update();
+
+    if (highVoltagePresent) {
+        sprintf(subtitle, "Zasilanie 24V");
+    } else {
+        sprintf(subtitle, "Brak 24V");
+    }
+
+    disp.clear();
+    disp.draw_string(0, 0, 1, title);
+    disp.draw_string(0, 10, 1, subtitle);
+    disp.draw_string(0, 10, 1, subtitle);
+    disp.show();
+
+    watchdog_update();
+    busy_wait_ms(2000);
+    watchdog_update();
 }
 
 void awake() {
@@ -212,7 +252,7 @@ void awake() {
     cyw43_arch_gpio_put(MPU_LED, true);
 
     // Setup wifi
-    setupWiFiModule("Xiaomi_52E3", "102101281026");
+    //setupWiFiModule("Xiaomi_52E3", "102101281026");
 }
 
 void shutdown() {
@@ -229,157 +269,6 @@ void shutdown() {
     cyw43_arch_deinit();
     gpio_put(MOSFET_LCD, false);
 
-    watchdog_update();
-}
-
-void initADC() {
-    info("ADC interface initialization...");
-    adc_init();
-
-    adc_set_temp_sensor_enabled(true);
-    adc_gpio_init(ADC_SYSTEM_BATTERY);
-    adc_gpio_init(ADC_EXTERNAL_BATTERY);
-    info("Done.");
-}
-void initI2C() {
-    info("I2C register interface initialization...");
-    i2c_init(I2C_ID, 400 * 1000);
-    info("setting gpio i2c functions");
-    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
-    info("activating internal pullup's");
-    gpio_pull_up(I2C_SDA);
-    gpio_pull_up(I2C_SCL);
-}
-void initGPIO() {
-    info("GPIO interface initialization...");
-    gpio_init(RELAY_POWER_24V);
-    gpio_init(RELAY_BAT_0);
-    gpio_init(RELAY_BAT_1);
-    gpio_init(MOSFET_BUZZER);
-    gpio_init(MOSFET_LCD);
-    //gpio_set_function(MPU_LED, GPIO_FUNC_PWM);
-
-    // Setup pwm
-    uint slice_num = pwm_gpio_to_slice_num(MPU_LED);
-    pwm_config config = pwm_get_default_config();
-    // Set divider, reduces counter clock to sysclock/this value
-    pwm_config_set_clkdiv(&config, 4.f);
-    // Load the configuration into our PWM slice, and set it running.
-    pwm_init(slice_num, &config, true);
-
-    gpio_init(BUZZER);
-    gpio_set_dir(RELAY_POWER_24V, GPIO_OUT);
-    gpio_set_dir(RELAY_BAT_0, GPIO_OUT);
-    gpio_set_dir(RELAY_BAT_1, GPIO_OUT);
-    gpio_set_dir(MOSFET_BUZZER, GPIO_OUT);
-    gpio_set_dir(MOSFET_LCD, GPIO_OUT);
-    //gpio_set_dir(MPU_LED, GPIO_OUT);
-    gpio_set_dir(BUZZER, GPIO_OUT);
-}
-
-void initPullUps() {
-    info("Pull ups initialization...");
-    gpio_pull_up(BUZZER);
-}
-
-void setupWiFiModule(const char *ssid, const char *password) {
-    info("Turining on wifi module");
-    cyw43_arch_enable_sta_mode();
-
-    int wifiConnectionTrys = 0;
-    int hardResetAttempts = 0;
-    int connected = -1;
-
-    wifiConnecting = true;
-
-    while (connected)
-    {
-        busy_wait_ms(2500);
-        watchdog_update();
-        connected = cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_MIXED_PSK, 5000);
-        watchdog_update();
-
-        for (int i = 0; i < 15; i++)
-        {
-            busy_wait_ms(1000);
-            watchdog_update();
-        }
-
-        bool hardReset = false;
-        wifiConnectionTrys++;
-
-        if (wifiConnectionTrys <= 5 && connected)
-        {
-            // Display status
-            char title[32];
-            sprintf(title, "WiFi E:%d", wifiConnectionTrys);
-
-            for (int i = 0; i < 30; i++)
-            {
-                busy_wait_ms(1000);
-                watchdog_update();
-            }
-        }
-
-        if (wifiConnectionTrys >= 5 && connected)
-        {
-            hardReset = true;
-            wifiConnectionTrys = 0;
-            hardResetAttempts++;
-        }
-
-        if (hardReset)
-        {
-            info("ESP8266 init reset fail, performing hard reset.");
-
-            for (int i = 0; i < 60; i++)
-            {
-                busy_wait_ms(1000);
-                watchdog_update();
-            }
-
-            for (int i = 0; i < 60; i++)
-            {
-                busy_wait_ms(1000);
-                watchdog_update();
-            }
-        }
-
-        if (hardResetAttempts >= 5 && connected)
-        {
-            int64_t startTime = get_absolute_time()._private_us_since_boot;
-            gpio_put(MOSFET_BUZZER, true);
-            busy_wait_ms(500);
-            while (true)
-            {
-                gpio_put(BUZZER, !gpio_get(BUZZER));
-                busy_wait_ms(550);
-
-                uint64_t now = get_absolute_time()._private_us_since_boot;
-
-                if ((startTime + (100 * 10000)) <= now) {
-                    watchdog_reboot(0, 0, 0x7fffff);
-                    disp.deinit();
-                    while (true) {};
-                }
-                watchdog_update();
-            }
-        }
-    }
-    // Signal that Wi-Fi works fine
-    watchdog_update();
-    printf("Connected!\n");
-    wifiConnecting = false;
-
-    disp.clear();
-    disp.bmp_show_image_with_offset(__wifi_bmp_data, 226, 5, 5);
-    disp.draw_string(50, 13, 1, "Connected!");
-    disp.show();
-
-    run_tls_client_test();
-    
-    busy_wait_ms(5000);
     watchdog_update();
 }
 

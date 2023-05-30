@@ -1,5 +1,34 @@
-#include <hardware/watchdog.h>
-#include "tls_client.h"
+//
+// Created by PaulekOfficial on 30/05/2023.
+//
+
+#ifndef INTERFACE_PICO_TLS2_CLIENT_H
+#define INTERFACE_PICO_TLS2_CLIENT_H
+
+#include <string.h>
+#include <time.h>
+
+#include "pico/stdlib.h"
+#include "pico/cyw43_arch.h"
+#include "lwip/pbuf.h"
+#include "lwip/altcp_tcp.h"
+#include "lwip/altcp_tls.h"
+#include "lwip/dns.h"
+#include "SimpleRequestBuilder.h"
+
+#define TLS_CLIENT_TIMEOUT_SECS  15
+
+typedef struct TLS_CLIENT_T_ {
+    struct altcp_pcb *pcb;
+    bool complete;
+} TLS_CLIENT_T;
+
+static struct altcp_tls_config *tls_config = NULL;
+
+static char* http_request_string;
+
+class tls2_client {
+};
 
 static err_t tls_client_close(void *arg) {
     TLS_CLIENT_T *state = (TLS_CLIENT_T*)arg;
@@ -30,7 +59,7 @@ static err_t tls_client_connected(void *arg, struct altcp_pcb *pcb, err_t err) {
     }
 
     printf("connected to server, sending request\n");
-    err = altcp_write(state->pcb, TLS_CLIENT_HTTP_REQUEST, strlen(TLS_CLIENT_HTTP_REQUEST), TCP_WRITE_FLAG_COPY);
+    err = altcp_write(state->pcb, http_request_string, strlen(http_request_string), TCP_WRITE_FLAG_COPY);
     if (err != ERR_OK) {
         printf("error writing data, err=%d", err);
         return tls_client_close(state);
@@ -58,7 +87,7 @@ static err_t tls_client_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, e
     }
 
     if (p->tot_len > 0) {
-        /* For simplicity this examples creates a buffer on stack the size of the data pending here, 
+        /* For simplicity this examples creates a buffer on stack the size of the data pending here,
            and copies all the data to it in one go.
            Do be aware that the amount of data can potentially be a bit large (TLS record size can be 16 KB),
            so you may want to use a smaller fixed size buffer and copy the data to it using a loop, if memory is a concern */
@@ -106,10 +135,9 @@ static void tls_client_dns_found(const char* hostname, const ip_addr_t *ipaddr, 
 
 
 static bool tls_client_open(const char *hostname, void *arg) {
-    watchdog_update();
     err_t err;
     ip_addr_t server_ip;
-    TLS_CLIENT_T *state = (TLS_CLIENT_T*) arg;
+    TLS_CLIENT_T *state = (TLS_CLIENT_T*)arg;
 
     state->pcb = altcp_tls_new(tls_config, IPADDR_TYPE_ANY);
     if (!state->pcb) {
@@ -123,8 +151,7 @@ static bool tls_client_open(const char *hostname, void *arg) {
     altcp_err(state->pcb, tls_client_err);
 
     /* Set SNI */
-    watchdog_update();
-    mbedtls_ssl_set_hostname((mbedtls_ssl_context *) altcp_tls_context(state->pcb), hostname);
+    mbedtls_ssl_set_hostname((mbedtls_ssl_context*) altcp_tls_context(state->pcb), hostname);
 
     printf("resolving %s\n", hostname);
 
@@ -132,7 +159,6 @@ static bool tls_client_open(const char *hostname, void *arg) {
     // You can omit them if you are in a callback from lwIP. Note that when using pico_cyw_arch_poll
     // these calls are a no-op and can be omitted, but it is a good practice to use them in
     // case you switch the cyw43_arch type later.
-    watchdog_update();
     cyw43_arch_lwip_begin();
 
     err = dns_gethostbyname(hostname, &server_ip, tls_client_dns_found, state);
@@ -146,7 +172,7 @@ static bool tls_client_open(const char *hostname, void *arg) {
         printf("error initiating DNS resolving, err=%d\n", err);
         tls_client_close(state->pcb);
     }
-    watchdog_update();
+
     cyw43_arch_lwip_end();
 
     return err == ERR_OK || err == ERR_INPROGRESS;
@@ -154,7 +180,7 @@ static bool tls_client_open(const char *hostname, void *arg) {
 
 // Perform initialisation
 static TLS_CLIENT_T* tls_client_init(void) {
-    TLS_CLIENT_T *state = (TLS_CLIENT_T *) calloc(1, sizeof(TLS_CLIENT_T));
+    TLS_CLIENT_T *state = (TLS_CLIENT_T*) (calloc(1, sizeof(TLS_CLIENT_T)));
     if (!state) {
         printf("failed to allocate state\n");
         return NULL;
@@ -163,37 +189,5 @@ static TLS_CLIENT_T* tls_client_init(void) {
     return state;
 }
 
-void run_tls_client_test(void) {
-    /* No CA certificate checking */
-    tls_config = altcp_tls_create_config_client(NULL, 0);
 
-    TLS_CLIENT_T *state = tls_client_init();
-    if (!state) {
-        printf("TLS_CLIENT_T state error! \r\n");
-        return;
-    }
-    if (!tls_client_open(TLS_CLIENT_SERVER, state)) {
-        printf("tls_client_open closed! \r\n");
-        return;
-    }
-    while(!state->complete) {
-        watchdog_update();
-        // the following #ifdef is only here so this same example can be used in multiple modes;
-        // you do not need it in your code
-#if PICO_CYW43_ARCH_POLL
-        // if you are using pico_cyw43_arch_poll, then you must poll periodically from your
-        // main loop (not from a timer) to check for Wi-Fi driver or lwIP work that needs to be done.
-        cyw43_arch_poll();
-        // you can poll as often as you like, however if you have nothing else to do you can
-        // choose to sleep until either a specified time, or cyw43_arch_poll() has work to do:
-        cyw43_arch_wait_for_work_until(make_timeout_time_ms(1000));
-#else
-        // if you are not using pico_cyw43_arch_poll, then WiFI driver and lwIP work
-        // is done via interrupt in the background. This sleep is just an example of some (blocking)
-        // work you might be doing.
-        sleep_ms(1000);
-#endif
-    }
-    free(state);
-    altcp_tls_free_config(tls_config);
-}
+#endif //INTERFACE_PICO_TLS2_CLIENT_H
