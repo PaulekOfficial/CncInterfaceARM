@@ -16,16 +16,13 @@ char* SimpleRequestBuilder::getUrl()
 {
     std::stringstream stream;
 
-    stream << "GET /smart-interfaces/measure/";
-    stream << battery0;
-    stream << "/";
-    stream << battery1;
-    stream << "/";
-    stream << status;
-
-    stream << " HTTP/1.1\r\n";
+    stream << "POST /smart-interface/measurement";
+    stream << " HTTP/1.2\r\n";
     stream << "Host: " TLS_CLIENT_SERVER "\r\n";
     stream << "Connection: close\r\n";
+    stream << "\r\n";
+
+    stream << "{\"interfaceUUID\":\"352da5cf-7e92-45ca-88a5-639e5dc2f592\",\"status\":\"BATTERY_MODE\",\"measurementList\": [{\"name\":\"0\", \"type\":\"BATTERY_VOLTAGE\", \"value\":\"6.14\"},{\"name\":\"1\", \"type\":\"BATTERY_VOLTAGE\", \"value\":\"2.16\"}]}";
     stream << "\r\n";
 
     std::string request = stream.str();

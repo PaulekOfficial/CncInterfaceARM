@@ -99,7 +99,7 @@ int main() {
     watchdog_update();
 
     // Setup wifi
-    wifi_manager.set_network("PaulekLab", "12345678");
+    wifi_manager.set_network("Xiaomi_52E3", "102101281026");
     wifi_manager.connect();
 
     if (wifi_manager.connected() == 0) {
