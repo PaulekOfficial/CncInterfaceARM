@@ -7,16 +7,15 @@
 #include <string>
 #include <cstring>
 
-#define TLS_CLIENT_SERVER        "api.pauleklab.com"
-
 class SimpleRequestBuilder {
 private:
     double battery0;
     double battery1;
-    std::string status;
+    char* status;
+    char* host;
 
 public:
-    SimpleRequestBuilder(double battery0_, double battery1_, std::string status_);
+    SimpleRequestBuilder(char* host_, double battery0_, double battery1_, char* status_);
 
     char* getUrl();
 

@@ -5,25 +5,33 @@
 #include <sstream>
 #include "SimpleRequestBuilder.h"
 
-SimpleRequestBuilder::SimpleRequestBuilder(double battery0_, double battery1_, std::string status_)
+SimpleRequestBuilder::SimpleRequestBuilder(char* host_, double battery0_, double battery1_, char* status_)
 {
     battery0 = battery0_;
     battery1 = battery1_;
     status = status_;
+    host = host_;
 }
 
 char* SimpleRequestBuilder::getUrl()
 {
     std::stringstream stream;
+    std::stringstream body;
+
+    body << "{\"interfaceUUID\":\"352da5cf-7e92-45ca-88a5-639e5dc2f592\",\"status\":\"BATTERY_MODE\",\"measurementList\": [{\"name\":\"0\", \"type\":\"BATTERY_VOLTAGE\", \"value\":\"6.14\"},{\"name\":\"1\", \"type\":\"BATTERY_VOLTAGE\", \"value\":\"2.16\"}]}";
+    body << "\r\n";
 
     stream << "POST /smart-interface/measurement";
-    stream << " HTTP/1.2\r\n";
-    stream << "Host: " TLS_CLIENT_SERVER "\r\n";
-    stream << "Connection: close\r\n";
+    stream << " HTTP/1.1\r\n";
+    stream << "Host: ";
+    stream << host;
     stream << "\r\n";
-
-    stream << "{\"interfaceUUID\":\"352da5cf-7e92-45ca-88a5-639e5dc2f592\",\"status\":\"BATTERY_MODE\",\"measurementList\": [{\"name\":\"0\", \"type\":\"BATTERY_VOLTAGE\", \"value\":\"6.14\"},{\"name\":\"1\", \"type\":\"BATTERY_VOLTAGE\", \"value\":\"2.16\"}]}";
+    stream << "Content-Type: application/json\r\n";
+    stream << "Content-Length: ";
+    stream << body.str().length();
     stream << "\r\n";
+    stream << "\r\n";
+    stream << body.str();
 
     std::string request = stream.str();
 
@@ -41,7 +49,7 @@ char* SimpleRequestBuilder::getUrl()
 
 char* SimpleRequestBuilder::getHost()
 {
-    return "Host: " TLS_CLIENT_SERVER "\r\n";
+    return host;
 }
 
 char* SimpleRequestBuilder::getConnectionBehaviur()

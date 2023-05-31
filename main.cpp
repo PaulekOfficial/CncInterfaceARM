@@ -1,6 +1,5 @@
 #include "main.h"
 
-
 //TODO DEBUG GPIO 5-2
 
 static void alarm_callback() {
@@ -94,7 +93,7 @@ int main() {
 
     // Setup watchdog
     info("Watchdog system initialization...");
-    watchdog_enable(9 * 1000, false);
+    //watchdog_enable(9 * 1000, false);
     if(watchdog_caused_reboot()) info("ALERT!!! System rebooted by watchdog, investigation required.");
     watchdog_update();
 
@@ -145,13 +144,13 @@ void loop()
         disp.draw_string(10, 10, 2, "PACKAGE");
         disp.show();
 
-        SimpleRequestBuilder simpleRequest(batteryVoltage0, batteryVoltage1, "battery");
+        SimpleRequestBuilder simpleRequest("api.pauleklab.com", batteryVoltage0, batteryVoltage1, "battery");
 
         disp.clear();
         disp.draw_string(10, 10, 2, "SEND");
         disp.show();
 
-        wifi_manager.http_request("api.pauleklab.com", simpleRequest.getUrl());
+        wifi_manager.http_request(simpleRequest.getHost(), simpleRequest.getUrl());
 
         writeInfo(temperature, batteryVoltage0, batteryVoltage1, batteryVoltage, highVoltagePresent);
         if (!highVoltagePresent)
