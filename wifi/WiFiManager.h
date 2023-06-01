@@ -28,14 +28,15 @@ private:
     bool trying_to_connect = false;
     int link_up = -1;
 public:
-    void init();
+    //void init();
     void set_network(std::string ssid_, std::string password_) { ssid = ssid_; password = password_; }
     void connect();
-    void disconnect();
-    char* http_request(char* hostname, char* request);
+    static void disconnect();
 
-    int connected() { return link_up; }
-    bool connecting() { return trying_to_connect; }
+    [[maybe_unused]] static char* http_request(HTTPRequestBuilder requestBuilder);
+
+    [[nodiscard]] int connected() const { return link_up; }
+    [[nodiscard]] bool connecting() const { return trying_to_connect; }
 };
 
 

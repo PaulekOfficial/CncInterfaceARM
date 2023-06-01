@@ -12,6 +12,13 @@ enum SmartInterface_Status {
     SLEEPING,
     OFFLINE
 };
+static const char* SmartInterface_Status_String[] = {
+        "RUNNING",
+        "IDLE",
+        "BATTERY_MODE",
+        "SLEEPING",
+        "OFFLINE"
+};
 
 class SmartInterface {
 

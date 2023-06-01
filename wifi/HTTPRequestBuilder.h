@@ -7,7 +7,7 @@
 #include <string>
 #include <cstring>
 
-const enum HTTP_Request_Type {
+enum HTTP_Request_Type {
     GET,
     POST,
     PUT,
@@ -30,7 +30,7 @@ static const char* HTTP_Request_Type_String[] = {
           "OPTIONS"
         };
 
-const enum HTTP_Content_Type {
+enum HTTP_Content_Type {
     JSON,
     TEXT,
     MULTIPART,
@@ -46,22 +46,56 @@ static const char* HTTP_Content_Type_String[] = {
 class HTTPRequestBuilder {
 private:
     char* host;
+    uint port;
     char* connection_type;
 
     HTTP_Request_Type request_type;
     char* request_path;
 
     HTTP_Content_Type content_type;
-    char* payload;
+    char* payload{};
 
 public:
-    HTTPRequestBuilder(char* host_, double battery0_, double battery1_, char* status_);
+    HTTPRequestBuilder(char* host_, uint port_, char* connection_type_, HTTP_Request_Type request_type_, char* request_path_, HTTP_Content_Type content_type_)
+    {
+        host = host_;
+        port = port_;
+        connection_type = connection_type_;
 
+        request_type = request_type_;
+        request_path = request_path_;
+
+        content_type = content_type_;
+    }
     char* build_request();
 
-    char* get_connection_type();
+    char *getHost() const;
 
-    char* get_host();
+    void setHost(char *host);
+
+    uint getPort() const;
+
+    void setPort(uint port);
+
+    char *getConnectionType() const;
+
+    void setConnectionType(char *connectionType);
+
+    HTTP_Request_Type getRequestType() const;
+
+    void setRequestType(HTTP_Request_Type requestType);
+
+    char *getRequestPath() const;
+
+    void setRequestPath(char *requestPath);
+
+    HTTP_Content_Type getContentType() const;
+
+    void setContentType(HTTP_Content_Type contentType);
+
+    char *getPayload() const;
+
+    void setPayload(char *payload);
 };
 
 

@@ -1,4 +1,6 @@
 #include "main.h"
+#include "domain/CurrentMeasurement.h"
+#include "domain/InterfaceMeasurement.h"
 
 //TODO DEBUG GPIO 5-2
 
@@ -128,6 +130,7 @@ void loop()
         info("Internal voltage: " + to_string(batteryVoltage));
         watchdog_update();
 
+
         double batteryVoltage0 = readBatteryVoltage(RELAY_BAT_0);
         info("Battery0 voltage: " + to_string(batteryVoltage0));
         watchdog_update();
@@ -140,17 +143,31 @@ void loop()
         bool highVoltagePresent = gpio_get(POWER_24V_READY);
         watchdog_update();
 
+        std::list<CurrentMeasurement> measurements;
+        CurrentMeasurement internalBattery("0", INTERNAL_BATTERY_VOLTAGE, batteryVoltage);
+        measurements.push_back(internalBattery);
+
+        CurrentMeasurement battery0("0", BATTERY_VOLTAGE, batteryVoltage0);
+        measurements.push_back(battery0);
+
+        CurrentMeasurement battery1("1", BATTERY_VOLTAGE, batteryVoltage1);
+        measurements.push_back(battery1);
+
+        InterfaceMeasurement interfaceMeasurement("352da5cf-7e92-45ca-88a5-639e5dc2f592", BATTERY_MODE, measurements);
+
         disp.clear();
         disp.draw_string(10, 10, 2, "PACKAGE");
         disp.show();
 
-        HTTPRequestBuilder simpleRequest("api.pauleklab.com", batteryVoltage0, batteryVoltage1, "battery");
+        HTTPRequestBuilder requestBuilder("api.pauleklab.com", 8443, "keep-alive", POST, "/smart-interface/measurement", JSON);
+        requestBuilder.setPayload(interfaceMeasurement.serialize());
+        info(requestBuilder.build_request());
 
         disp.clear();
         disp.draw_string(10, 10, 2, "SEND");
         disp.show();
 
-        wifi_manager.http_request(simpleRequest.getHost(), simpleRequest.getUrl());
+        wifi_manager.http_request(requestBuilder);
 
         writeInfo(temperature, batteryVoltage0, batteryVoltage1, batteryVoltage, highVoltagePresent);
         if (!highVoltagePresent)

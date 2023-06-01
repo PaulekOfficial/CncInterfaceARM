@@ -22,8 +22,6 @@
 
 #define TLS_CLIENT_TIMEOUT_SECS  15
 
-#define PORT 8443
-
 typedef struct TLS_CLIENT_T_ {
     struct altcp_pcb *pcb;
     bool complete;
@@ -51,68 +49,7 @@ struct altcp_tls_config {
 static struct altcp_tls_config *tls_config = NULL;
 
 static char* http_request_string;
-
-static char certificate_string[] = "-----BEGIN CERTIFICATE-----\n"
-                                   "MIIFFjCCAv6gAwIBAgIRAJErCErPDBinU/bWLiWnX1owDQYJKoZIhvcNAQELBQAw\n"
-                                   "TzELMAkGA1UEBhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2Vh\n"
-                                   "cmNoIEdyb3VwMRUwEwYDVQQDEwxJU1JHIFJvb3QgWDEwHhcNMjAwOTA0MDAwMDAw\n"
-                                   "WhcNMjUwOTE1MTYwMDAwWjAyMQswCQYDVQQGEwJVUzEWMBQGA1UEChMNTGV0J3Mg\n"
-                                   "RW5jcnlwdDELMAkGA1UEAxMCUjMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK\n"
-                                   "AoIBAQC7AhUozPaglNMPEuyNVZLD+ILxmaZ6QoinXSaqtSu5xUyxr45r+XXIo9cP\n"
-                                   "R5QUVTVXjJ6oojkZ9YI8QqlObvU7wy7bjcCwXPNZOOftz2nwWgsbvsCUJCWH+jdx\n"
-                                   "sxPnHKzhm+/b5DtFUkWWqcFTzjTIUu61ru2P3mBw4qVUq7ZtDpelQDRrK9O8Zutm\n"
-                                   "NHz6a4uPVymZ+DAXXbpyb/uBxa3Shlg9F8fnCbvxK/eG3MHacV3URuPMrSXBiLxg\n"
-                                   "Z3Vms/EY96Jc5lP/Ooi2R6X/ExjqmAl3P51T+c8B5fWmcBcUr2Ok/5mzk53cU6cG\n"
-                                   "/kiFHaFpriV1uxPMUgP17VGhi9sVAgMBAAGjggEIMIIBBDAOBgNVHQ8BAf8EBAMC\n"
-                                   "AYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMBIGA1UdEwEB/wQIMAYB\n"
-                                   "Af8CAQAwHQYDVR0OBBYEFBQusxe3WFbLrlAJQOYfr52LFMLGMB8GA1UdIwQYMBaA\n"
-                                   "FHm0WeZ7tuXkAXOACIjIGlj26ZtuMDIGCCsGAQUFBwEBBCYwJDAiBggrBgEFBQcw\n"
-                                   "AoYWaHR0cDovL3gxLmkubGVuY3Iub3JnLzAnBgNVHR8EIDAeMBygGqAYhhZodHRw\n"
-                                   "Oi8veDEuYy5sZW5jci5vcmcvMCIGA1UdIAQbMBkwCAYGZ4EMAQIBMA0GCysGAQQB\n"
-                                   "gt8TAQEBMA0GCSqGSIb3DQEBCwUAA4ICAQCFyk5HPqP3hUSFvNVneLKYY611TR6W\n"
-                                   "PTNlclQtgaDqw+34IL9fzLdwALduO/ZelN7kIJ+m74uyA+eitRY8kc607TkC53wl\n"
-                                   "ikfmZW4/RvTZ8M6UK+5UzhK8jCdLuMGYL6KvzXGRSgi3yLgjewQtCPkIVz6D2QQz\n"
-                                   "CkcheAmCJ8MqyJu5zlzyZMjAvnnAT45tRAxekrsu94sQ4egdRCnbWSDtY7kh+BIm\n"
-                                   "lJNXoB1lBMEKIq4QDUOXoRgffuDghje1WrG9ML+Hbisq/yFOGwXD9RiX8F6sw6W4\n"
-                                   "avAuvDszue5L3sz85K+EC4Y/wFVDNvZo4TYXao6Z0f+lQKc0t8DQYzk1OXVu8rp2\n"
-                                   "yJMC6alLbBfODALZvYH7n7do1AZls4I9d1P4jnkDrQoxB3UqQ9hVl3LEKQ73xF1O\n"
-                                   "yK5GhDDX8oVfGKF5u+decIsH4YaTw7mP3GFxJSqv3+0lUFJoi5Lc5da149p90Ids\n"
-                                   "hCExroL1+7mryIkXPeFM5TgO9r0rvZaBFOvV2z0gp35Z0+L4WPlbuEjN/lxPFin+\n"
-                                   "HlUjr8gRsI3qfJOQFy/9rKIJR0Y/8Omwt/8oTWgy1mdeHmmjk7j1nYsvC9JSQ6Zv\n"
-                                   "MldlTTKB3zhThV1+XWYp6rjd5JW1zbVWEkLNxE7GJThEUG3szgBVGP7pSWTUTsqX\n"
-                                   "nLRbwHOoq7hHwg==\n"
-                                   "-----END CERTIFICATE-----\n"
-                                   "-----BEGIN CERTIFICATE-----\n"
-                                   "MIIFYDCCBEigAwIBAgIQQAF3ITfU6UK47naqPGQKtzANBgkqhkiG9w0BAQsFADA/\n"
-                                   "MSQwIgYDVQQKExtEaWdpdGFsIFNpZ25hdHVyZSBUcnVzdCBDby4xFzAVBgNVBAMT\n"
-                                   "DkRTVCBSb290IENBIFgzMB4XDTIxMDEyMDE5MTQwM1oXDTI0MDkzMDE4MTQwM1ow\n"
-                                   "TzELMAkGA1UEBhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2Vh\n"
-                                   "cmNoIEdyb3VwMRUwEwYDVQQDEwxJU1JHIFJvb3QgWDEwggIiMA0GCSqGSIb3DQEB\n"
-                                   "AQUAA4ICDwAwggIKAoICAQCt6CRz9BQ385ueK1coHIe+3LffOJCMbjzmV6B493XC\n"
-                                   "ov71am72AE8o295ohmxEk7axY/0UEmu/H9LqMZshftEzPLpI9d1537O4/xLxIZpL\n"
-                                   "wYqGcWlKZmZsj348cL+tKSIG8+TA5oCu4kuPt5l+lAOf00eXfJlII1PoOK5PCm+D\n"
-                                   "LtFJV4yAdLbaL9A4jXsDcCEbdfIwPPqPrt3aY6vrFk/CjhFLfs8L6P+1dy70sntK\n"
-                                   "4EwSJQxwjQMpoOFTJOwT2e4ZvxCzSow/iaNhUd6shweU9GNx7C7ib1uYgeGJXDR5\n"
-                                   "bHbvO5BieebbpJovJsXQEOEO3tkQjhb7t/eo98flAgeYjzYIlefiN5YNNnWe+w5y\n"
-                                   "sR2bvAP5SQXYgd0FtCrWQemsAXaVCg/Y39W9Eh81LygXbNKYwagJZHduRze6zqxZ\n"
-                                   "Xmidf3LWicUGQSk+WT7dJvUkyRGnWqNMQB9GoZm1pzpRboY7nn1ypxIFeFntPlF4\n"
-                                   "FQsDj43QLwWyPntKHEtzBRL8xurgUBN8Q5N0s8p0544fAQjQMNRbcTa0B7rBMDBc\n"
-                                   "SLeCO5imfWCKoqMpgsy6vYMEG6KDA0Gh1gXxG8K28Kh8hjtGqEgqiNx2mna/H2ql\n"
-                                   "PRmP6zjzZN7IKw0KKP/32+IVQtQi0Cdd4Xn+GOdwiK1O5tmLOsbdJ1Fu/7xk9TND\n"
-                                   "TwIDAQABo4IBRjCCAUIwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAQYw\n"
-                                   "SwYIKwYBBQUHAQEEPzA9MDsGCCsGAQUFBzAChi9odHRwOi8vYXBwcy5pZGVudHJ1\n"
-                                   "c3QuY29tL3Jvb3RzL2RzdHJvb3RjYXgzLnA3YzAfBgNVHSMEGDAWgBTEp7Gkeyxx\n"
-                                   "+tvhS5B1/8QVYIWJEDBUBgNVHSAETTBLMAgGBmeBDAECATA/BgsrBgEEAYLfEwEB\n"
-                                   "ATAwMC4GCCsGAQUFBwIBFiJodHRwOi8vY3BzLnJvb3QteDEubGV0c2VuY3J5cHQu\n"
-                                   "b3JnMDwGA1UdHwQ1MDMwMaAvoC2GK2h0dHA6Ly9jcmwuaWRlbnRydXN0LmNvbS9E\n"
-                                   "U1RST09UQ0FYM0NSTC5jcmwwHQYDVR0OBBYEFHm0WeZ7tuXkAXOACIjIGlj26Ztu\n"
-                                   "MA0GCSqGSIb3DQEBCwUAA4IBAQAKcwBslm7/DlLQrt2M51oGrS+o44+/yQoDFVDC\n"
-                                   "5WxCu2+b9LRPwkSICHXM6webFGJueN7sJ7o5XPWioW5WlHAQU7G75K/QosMrAdSW\n"
-                                   "9MUgNTP52GE24HGNtLi1qoJFlcDyqSMo59ahy2cI2qBDLKobkx/J3vWraV0T9VuG\n"
-                                   "WCLKTVXkcGdtwlfFRjlBz4pYg1htmf5X6DYO8A4jqv2Il9DjXA6USbW1FzXSLr9O\n"
-                                   "he8Y4IWS6wY7bCkjCWDcRQJMEhg76fsO3txE+FiYruq9RUWhiF1myv4Q6W+CyBFC\n"
-                                   "Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5\n"
-                                   "-----END CERTIFICATE-----\n";
+static uint portt;
 
 class tls2_client {
 };
@@ -192,12 +129,12 @@ static err_t tls_client_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, e
     return ERR_OK;
 }
 
-static void tls_client_connect_to_server_ip(const ip_addr_t *ipaddr, u16_t port, TLS_CLIENT_T *state)
+static void tls_client_connect_to_server_ip(const ip_addr_t *ipaddr, TLS_CLIENT_T *state)
 {
     err_t err;
 
-    printf("connecting to server IP %s port %d\n", ipaddr_ntoa(ipaddr), port);
-    err = altcp_connect(state->pcb, ipaddr, port, tls_client_connected);
+    printf("connecting to server IP %s port %d\n", ipaddr_ntoa(ipaddr), portt);
+    err = altcp_connect(state->pcb, ipaddr, portt, tls_client_connected);
     if (err != ERR_OK)
     {
         fprintf(stderr, "error initiating connect, err=%d\n", err);
@@ -210,7 +147,7 @@ static void tls_client_dns_found(const char* hostname, const ip_addr_t *ipaddr, 
     if (ipaddr)
     {
         printf("DNS resolving complete\n");
-        tls_client_connect_to_server_ip(ipaddr, PORT, (TLS_CLIENT_T *) arg);
+        tls_client_connect_to_server_ip(ipaddr, (TLS_CLIENT_T *) arg);
     }
     else
     {
@@ -261,7 +198,7 @@ static int my_verify(void *data, mbedtls_x509_crt *crt, int depth, uint32_t *fla
     return 0;
 }
 
-static bool tls_client_open(const char *hostname, void *arg) {
+static bool tls_client_open(const char *hostname, uint port, void *arg) {
     err_t err;
     ip_addr_t server_ip;
     TLS_CLIENT_T *state = (TLS_CLIENT_T*)arg;
@@ -293,24 +230,6 @@ static bool tls_client_open(const char *hostname, void *arg) {
     ** If we skipped this step, an active attacker could impersonate the server. */
     mbedtls_ssl_conf_authmode(&tls_config->conf, MBEDTLS_SSL_VERIFY_NONE);
 
-//    /* Structure to load trusted root certs into. */
-//    mbedtls_x509_crt ca_certs;
-//    mbedtls_x509_crt_init(&ca_certs);
-//
-//    /* Parse the file with root certificates. */
-//    int result_code = mbedtls_x509_crt_parse(&ca_certs, (unsigned char*) certificate_string, strlen(certificate_string) + 1);
-//    if (result_code != 0)
-//    {
-//        printf("error %d parsing certificate \n", result_code);
-//        tls_client_close(state->pcb);
-//    }
-//
-//    printf("Added cert %d %u %u \n", ca_certs.version, ca_certs.issuer.next_merged, ca_certs.ns_cert_type);
-//
-//    /* Print information about the TLS connection */
-//    /* Set the certificates as trusted for this session. */
-//    mbedtls_ssl_conf_ca_chain(&tls_config->conf, &ca_certs, nullptr);
-
     /* Set hostname for verification.
     ** Not setting the hostname would mean that we would accept a certificate of any trusted server.
     ** It also sets the Server Name Indication TLS extension.
@@ -329,7 +248,7 @@ static bool tls_client_open(const char *hostname, void *arg) {
     if (err == ERR_OK)
     {
         /* host is in DNS cache */
-        tls_client_connect_to_server_ip(&server_ip, PORT, state);
+        tls_client_connect_to_server_ip(&server_ip, state);
     }
     else if (err != ERR_INPROGRESS)
     {

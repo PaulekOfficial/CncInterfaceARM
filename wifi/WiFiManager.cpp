@@ -95,7 +95,7 @@ void WiFiManager::disconnect() {
     cyw43_wifi_leave(&cyw43_state, CYW43_ITF_STA);
 }
 
-char* WiFiManager::http_request(char* hostname, char* request) {
+[[maybe_unused]] char* WiFiManager::http_request(HTTPRequestBuilder requestBuilder) {
     /* No CA certificate checking */
     tls_config = altcp_tls_create_config_client(NULL, 0);
 
@@ -104,9 +104,10 @@ char* WiFiManager::http_request(char* hostname, char* request) {
         return nullptr;
     }
 
-    http_request_string = request;
+    http_request_string = requestBuilder.build_request();
+    portt = requestBuilder.getPort();
 
-    if (!tls_client_open(hostname, state)) {
+    if (!tls_client_open(requestBuilder.getHost(), requestBuilder.getPort(), state)) {
         return nullptr;
     }
     while(!state->complete) {

@@ -5,69 +5,49 @@
 #ifndef INTERFACE_PICO_CURRENTMEASUREMENT_H
 #define INTERFACE_PICO_CURRENTMEASUREMENT_H
 
+#include <string>
+#include <map>
+#include <sstream>
 
-class CurrentMeasurement {
-
+enum CurrentType {
+    BATTERY_VOLTAGE,
+    INTERNAL_BATTERY_VOLTAGE,
+    CURRENT
+};
+static const char* CurrentType_String[] = {
+        "BATTERY_VOLTAGE",
+        "INTERNAL_BATTERY_VOLTAGE",
+        "CURRENT"
 };
 
-//private String name;
-//private CurrentType type;
-//private double value;
-//
-//public CurrentMeasurement(String name, CurrentType type, double value) {
-//this.name = name;
-//this.type = type;
-//this.value = value;
-//}
-//
-//public String getName() {
-//    return name;
-//}
-//
-//public void setName(String name) {
-//this.name = name;
-//}
-//
-//public CurrentType getType() {
-//    return type;
-//}
-//
-//public void setType(CurrentType type) {
-//    this.type = type;
-//}
-//
-//public double getValue() {
-//    return value;
-//}
-//
-//public void setValue(double value) {
-//    this.value = value;
-//}
-//
-//public enum CurrentType {
-//    BATTERY_VOLTAGE("battery"),
-//    INTERNAL_BATTERY_VOLTAGE("internal-battery"),
-//    CURRENT("current");
-//
-//    private final String name;
-//
-//    CurrentType(String name) {
-//        this.name = name;
-//    }
-//
-//    public String getName() {
-//        return name;
-//    }
-//
-//    public static CurrentType getByName(String name) {
-//        for (CurrentType type : CurrentType.values()) {
-//            if (name.equalsIgnoreCase(type.getName())) {
-//                return type;
-//            }
-//        }
-//
-//        return null;
-//    }
-//}
+class CurrentMeasurement {
+private:
+    char* name;
+    CurrentType type;
+    double value;
+
+public:
+    virtual ~CurrentMeasurement();
+
+    CurrentMeasurement(char *name, CurrentType type, double value);
+
+    [[nodiscard]] char *getName() const;
+
+    void setName(char *name);
+
+    [[nodiscard]] CurrentType getType() const;
+
+    void setType(CurrentType type);
+
+    [[nodiscard]] double getValue() const;
+
+    void setValue(double value);
+
+    char* serialize();
+
+    bool operator==(const CurrentMeasurement &rhs) const;
+
+    bool operator!=(const CurrentMeasurement &rhs) const;
+};
 
 #endif //INTERFACE_PICO_CURRENTMEASUREMENT_H
