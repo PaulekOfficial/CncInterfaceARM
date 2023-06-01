@@ -18,7 +18,7 @@
 #include "lwip/altcp_tcp.h"
 #include "lwip/altcp_tls.h"
 #include "lwip/dns.h"
-#include "SimpleRequestBuilder.h"
+#include "HTTPRequestBuilder.h"
 
 #define TLS_CLIENT_TIMEOUT_SECS  15
 

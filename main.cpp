@@ -144,7 +144,7 @@ void loop()
         disp.draw_string(10, 10, 2, "PACKAGE");
         disp.show();
 
-        SimpleRequestBuilder simpleRequest("api.pauleklab.com", batteryVoltage0, batteryVoltage1, "battery");
+        HTTPRequestBuilder simpleRequest("api.pauleklab.com", batteryVoltage0, batteryVoltage1, "battery");
 
         disp.clear();
         disp.draw_string(10, 10, 2, "SEND");
