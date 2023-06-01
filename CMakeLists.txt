@@ -31,7 +31,7 @@ add_executable(interface_pico ${SRC_LIST} lwipopts.h
         analog/adc_utils.h utils/utils.cpp
         main.h main.cpp
         oled/oled_display.cpp oled/oled_display.h oled/font.h
-        sleep/sleep.h sleep/sleep.c hardware/rosc.c hardware/rosc.h mbedtls_config.h wifi/SimpleRequestBuilder.cpp wifi/SimpleRequestBuilder.h wifi/WiFiManager.cpp wifi/WiFiManager.h wifi/tls2_client.cpp wifi/tls2_client.h utils/oledImages.h utils/pin_mapping.h)
+        sleep/sleep.h sleep/sleep.c hardware/rosc.c hardware/rosc.h mbedtls_config.h wifi/SimpleRequestBuilder.cpp wifi/SimpleRequestBuilder.h wifi/WiFiManager.cpp wifi/WiFiManager.h wifi/tls2_client.cpp wifi/tls2_client.h utils/oledImages.h utils/pin_mapping.h domain/InterfaceMeasurement.cpp domain/InterfaceMeasurement.h domain/CurrentMeasurement.cpp domain/CurrentMeasurement.h domain/SmartInterface.cpp domain/SmartInterface.h domain/JsonSerializable.h)
 
 target_include_directories(interface_pico PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}

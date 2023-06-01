@@ -28,6 +28,7 @@ private:
     bool trying_to_connect = false;
     int link_up = -1;
 public:
+    void init();
     void set_network(std::string ssid_, std::string password_) { ssid = ssid_; password = password_; }
     void connect();
     void disconnect();
