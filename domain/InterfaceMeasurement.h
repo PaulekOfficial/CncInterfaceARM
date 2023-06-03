@@ -45,7 +45,7 @@ public:
 
     void setTimestamp(long timestamp);
 
-    char* serialize();
+    std::string serialize();
 
     bool operator==(const InterfaceMeasurement &rhs) const;
 

@@ -48,7 +48,7 @@ struct altcp_tls_config {
 
 static struct altcp_tls_config *tls_config = NULL;
 
-static const char* http_request_string;
+static char* http_request_string;
 static uint portt;
 
 class tls2_client {
@@ -230,13 +230,17 @@ static bool tls_client_open(const char *hostname, uint port, void *arg) {
     ** If we skipped this step, an active attacker could impersonate the server. */
     mbedtls_ssl_conf_authmode(&tls_config->conf, MBEDTLS_SSL_VERIFY_NONE);
 
+    printf("tls2client hostname: %s \n", hostname);
+    printf("tls2client port: %d \n", port);
+
     /* Set hostname for verification.
     ** Not setting the hostname would mean that we would accept a certificate of any trusted server.
     ** It also sets the Server Name Indication TLS extension.
     ** This is required when multiple servers are running at the same IP address (virtual hosting). */
     mbedtls_ssl_set_hostname((mbedtls_ssl_context*) altcp_tls_context(state->pcb), hostname);
+    portt = port;
 
-    printf("resolving %s\n", hostname);
+    printf("resolving %s \n", hostname);
 
     // cyw43_arch_lwip_begin/end should be used around calls into lwIP to ensure correct locking.
     // You can omit them if you are in a callback from lwIP. Note that when using pico_cyw_arch_poll

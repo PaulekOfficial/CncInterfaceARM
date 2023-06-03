@@ -11,7 +11,7 @@ void core1_entry() {
         if (wifi_manager.connecting()) {
             disp.clear();
             disp.bmp_show_image_with_offset(__wifi_bmp_data, 226, 5, 5);
-            disp.draw_string(0, 30, 1, ssid);
+            disp.draw_string(40, 0, 1, ssid.c_str());
 
             int x = 50;
             for (int i = 0; i < dots; i++) {
@@ -170,6 +170,7 @@ int main() {
     if (state == CONFIGURATION_WIFI) {
         initConfigServer();
 
+        busy_wait_ms(5000);
         //Init pico wifi module
         initInfineon();
 
@@ -250,7 +251,7 @@ void loop()
         disp.draw_string(10, 10, 2, "PACKAGE");
         disp.show();
 
-        HTTPRequestBuilder requestBuilder(hostname, port, "keep-alive", POST, "/smart-interface/measurement", JSON);
+        HTTPRequestBuilder requestBuilder(hostname.data(), port, "keep-alive", POST, "/smart-interface/measurement", JSON);
         requestBuilder.setPayload(interfaceMeasurement.serialize());
         info(requestBuilder.build_request());
 
@@ -258,7 +259,7 @@ void loop()
         disp.draw_string(10, 10, 2, "SEND");
         disp.show();
 
-        wifi_manager.http_request(requestBuilder);
+        WiFiManager::http_request(requestBuilder);
 
         writeInfo(temperature, batteryVoltage0, batteryVoltage1, batteryVoltage, highVoltagePresent);
         if (!highVoltagePresent)

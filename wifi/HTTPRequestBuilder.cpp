@@ -5,7 +5,7 @@
 #include <sstream>
 #include "HTTPRequestBuilder.h"
 
-const char* HTTPRequestBuilder::build_request()
+char* HTTPRequestBuilder::build_request()
 {
     std::stringstream stream;
 
@@ -31,7 +31,7 @@ const char* HTTPRequestBuilder::build_request()
     if (payload[0] != '\0')
     {
         stream << "Content-Length: ";
-        stream << strlen(payload);
+        stream << payload.size();
         stream << "\r\n";
         stream << "\r\n";
         stream << payload;
@@ -40,7 +40,7 @@ const char* HTTPRequestBuilder::build_request()
 
     std::string request = stream.str();
 
-    const int length = request.length();
+    const uint length = request.length();
 
     // declaring character array (+1 for null terminator)
     char* char_array = new char[length + 1];
@@ -52,27 +52,27 @@ const char* HTTPRequestBuilder::build_request()
     return char_array;
 }
 
-const char *HTTPRequestBuilder::getHost() const {
+char *HTTPRequestBuilder::getHost() const {
     return host;
 }
 
-void HTTPRequestBuilder::setHost(const char *host) {
-    HTTPRequestBuilder::host = host;
+void HTTPRequestBuilder::setHost(char *host_) {
+    HTTPRequestBuilder::host = host_;
 }
 
 uint HTTPRequestBuilder::getPort() const {
     return port;
 }
 
-void HTTPRequestBuilder::setPort(uint port) {
-    HTTPRequestBuilder::port = port;
+void HTTPRequestBuilder::setPort(uint port_) {
+    HTTPRequestBuilder::port = port_;
 }
 
-const char *HTTPRequestBuilder::getConnectionType() const {
+char *HTTPRequestBuilder::getConnectionType() const {
     return connection_type;
 }
 
-void HTTPRequestBuilder::setConnectionType(const char *connectionType) {
+void HTTPRequestBuilder::setConnectionType(char *connectionType) {
     connection_type = connectionType;
 }
 
@@ -84,11 +84,11 @@ void HTTPRequestBuilder::setRequestType(HTTP_Request_Type requestType) {
     request_type = requestType;
 }
 
-const char *HTTPRequestBuilder::getRequestPath() const {
+char *HTTPRequestBuilder::getRequestPath() const {
     return request_path;
 }
 
-void HTTPRequestBuilder::setRequestPath(const char *requestPath) {
+void HTTPRequestBuilder::setRequestPath(char *requestPath) {
     request_path = requestPath;
 }
 
@@ -100,10 +100,10 @@ void HTTPRequestBuilder::setContentType(HTTP_Content_Type contentType) {
     content_type = contentType;
 }
 
-const char *HTTPRequestBuilder::getPayload() const {
+std::string HTTPRequestBuilder::getPayload() const {
     return payload;
 }
 
-void HTTPRequestBuilder::setPayload(const char *payload) {
-    HTTPRequestBuilder::payload = payload;
+void HTTPRequestBuilder::setPayload(std::string payload_) {
+    HTTPRequestBuilder::payload = payload_;
 }

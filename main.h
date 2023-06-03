@@ -54,10 +54,10 @@ uint clock1_orig;
 
 State state;
 
-const char* ssid;
-const char* password;
+std::string ssid;
+std::string password;
 
-const char* hostname;
+std::string hostname;
 uint port;
 
 WiFiManager wifi_manager;

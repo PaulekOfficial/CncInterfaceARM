@@ -44,7 +44,7 @@ InterfaceMeasurement::InterfaceMeasurement(char *interfaceUuid, SmartInterface_S
                                            const std::list<CurrentMeasurement> &measurementList, long timestamp)
         : interfaceUUID(interfaceUuid), status(status), measurementList(measurementList), timestamp(timestamp) {}
 
-char *InterfaceMeasurement::serialize() {
+std::string InterfaceMeasurement::serialize() {
     //{"interfaceUUID":"352da5cf-7e92-45ca-88a5-639e5dc2f592","status":"BATTERY_MODE","measurementList": [{"name":"", "type":"INTERNAL_BATTERY_VOLTAGE", "value":".15"},{"name":"0", "type":"BATTERY_VOLTAGE", "value":"6.14"},{"name":"1", "type":"BATTERY_VOLTAGE", "value":"2.16"}]}
 
     std::map<std::string,std::string> jsonMap;
@@ -93,7 +93,7 @@ char *InterfaceMeasurement::serialize() {
     }
     stream << "}";
 
-    return const_cast<char *>(stream.str().c_str());
+    return stream.str();
 }
 
 bool InterfaceMeasurement::operator==(const InterfaceMeasurement &rhs) const {

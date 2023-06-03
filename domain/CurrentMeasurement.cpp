@@ -4,7 +4,7 @@
 
 #include "CurrentMeasurement.h"
 
-char *CurrentMeasurement::serialize() {
+std::string CurrentMeasurement::serialize() {
     //{"name":"0", "type":"BATTERY_VOLTAGE", "value":"6.14"}
 
     std::map<std::string,std::string> jsonMap;
@@ -34,7 +34,7 @@ char *CurrentMeasurement::serialize() {
     }
     stream << "}";
 
-    return const_cast<char *>(stream.str().c_str());
+    return stream.str();
 }
 
 char *CurrentMeasurement::getName() const {

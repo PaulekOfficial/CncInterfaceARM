@@ -37,7 +37,7 @@ char* body = "<html>\n"
              "    <h3>Ustawienia serwera api</h3>\n"
              "    <p>edytuj te ustawienia jezeli wiesz co robisz, wprowadzenie blednych danych moze uszkodzic urzadzenie</p><br>\n"
              "    <label for=\"hostname\">Hostname:</label><br>\n"
-             "    <input type=\"text\" id=\"hostname\" name=\"hostname\" value=\"api.pauleklab.com\"><br>\n"
+             "    <input type=\"text\" id=\"host\" name=\"hostname\" value=\"api.pauleklab.com\"><br>\n"
              "    <label for=\"port\">Port:</label><br>\n"
              "    <input type=\"text\" id=\"port\" name=\"port\" value=\"8443\"><br><br>\n"
              "\n"
@@ -68,13 +68,13 @@ typedef struct TCP_CONNECT_STATE_T_ {
     TCP_SERVER_T *server;
 } TCP_CONNECT_STATE_T;
 
-static   bool kill_server = false;
+static bool kill_server = false;
 
-static const char* ssid_;
-static const char* password_;
+std::string ssid_;
+std::string password_;
 
-static const char* hostname_;
-static uint port_;
+std::string hostname_;
+uint port_;
 
 static err_t tcpCloseClientConnection(TCP_CONNECT_STATE_T *con_state, struct tcp_pcb *client_pcb, err_t close_err) {
     if (client_pcb) {
@@ -148,28 +148,38 @@ static int serverContent(const char *request, const char *params, char *result, 
         }
 
         DEBUG_printf("parsing params...\n");
+        int paramsCount = 0;
         std::unordered_map<std::string, std::string> queryParams = parseGetQuery(params);
 
         for (const auto& pair : queryParams) {
+            printf("website debug key: %s value: %s \n", pair.first.c_str(), pair.second.c_str());
+
             if (pair.first == "port") {
                 port_ = atoi(pair.second.c_str());
+                paramsCount++;
             }
 
             if (pair.first == "hostname") {
-                hostname_ = pair.second.c_str();
+                hostname_ = pair.second;
+                paramsCount++;
             }
 
             if (pair.first == "password") {
-                password_ = pair.second.c_str();
+                password_ = pair.second;
+                paramsCount++;
             }
 
             if (pair.first == "ssid") {
-                ssid_ = pair.second.c_str();
+                ssid_ = pair.second;
+                paramsCount++;
             }
         }
 
-        DEBUG_printf("data saved!\n");
-        kill_server = true;
+        if (paramsCount >= 4) {
+            DEBUG_printf("data saved!\n");
+            kill_server = true;
+        }
+
 
         len = snprintf(result, max_result_len, body);
     }

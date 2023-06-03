@@ -43,7 +43,7 @@ public:
 
     void setValue(double value);
 
-    char* serialize();
+    std::string serialize();
 
     bool operator==(const CurrentMeasurement &rhs) const;
 
