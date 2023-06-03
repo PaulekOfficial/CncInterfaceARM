@@ -1,6 +1,4 @@
 #include "main.h"
-#include "domain/CurrentMeasurement.h"
-#include "domain/InterfaceMeasurement.h"
 
 //TODO DEBUG GPIO 5-2
 
@@ -13,6 +11,7 @@ void core1_entry() {
         if (wifi_manager.connecting()) {
             disp.clear();
             disp.bmp_show_image_with_offset(__wifi_bmp_data, 226, 5, 5);
+            disp.draw_string(0, 30, 1, ssid);
 
             int x = 50;
             for (int i = 0; i < dots; i++) {
@@ -32,6 +31,73 @@ void core1_entry() {
     }
 }
 
+void initConfigServer() {
+    std::string ap_ssid = "SmartInterface_" + gen_random_string(5);
+
+    disp.clear();
+    disp.draw_string(0, 0, 1, "KONFIGURACJA");
+    disp.draw_string(0, 10, 1, "Polacz sie z siecia");
+    disp.draw_string(0, 20, 1, ap_ssid.c_str());
+    disp.show();
+
+    cyw43_arch_enable_ap_mode(ap_ssid.c_str(), "", CYW43_AUTH_OPEN);
+
+    TCP_SERVER_T *state = static_cast<TCP_SERVER_T *>(calloc(1, sizeof(TCP_SERVER_T)));
+
+    ip4_addr_t mask;
+    IP4_ADDR(ip_2_ip4(&state->gw), 192, 168, 4, 1);
+    IP4_ADDR(ip_2_ip4(&mask), 255, 255, 255, 0);
+
+    // Start the dhcp server
+    dhcp_server_t dhcp_server;
+    dhcp_server_init(&dhcp_server, &state->gw, &mask);
+
+    // Start the dns server
+    dns_server_t dns_server;
+    dns_server_init(&dns_server, &state->gw);
+
+    if (!tcpServerOpen(state)) {
+        DEBUG_printf("failed to open server\n");
+        return;
+    }
+
+    while(!state->complete) {
+#if PICO_CYW43_ARCH_POLL
+        // if you are using pico_cyw43_arch_poll, then you must poll periodically from your
+        // main loop (not from a timer interrupt) to check for Wi-Fi driver or lwIP work that needs to be done.
+        cyw43_arch_poll();
+        // you can poll as often as you like, however if you have nothing else to do you can
+        // choose to sleep until either a specified time, or cyw43_arch_poll() has work to do:
+        cyw43_arch_wait_for_work_until(make_timeout_time_ms(1000));
+#else
+        // if you are not using pico_cyw43_arch_poll, then Wi-FI driver and lwIP work
+        // is done via interrupt in the background. This sleep is just an example of some (blocking)
+        // work you might be doing.
+        sleep_ms(1000);
+#endif
+    }
+
+    ssid = ssid_;
+    password = password_;
+    hostname = hostname_;
+    port = port_;
+
+    tcpServerClose(state);
+    dns_server_deinit(&dns_server);
+    dhcp_server_deinit(&dhcp_server);
+    cyw43_arch_deinit();
+}
+
+void initInfineon() {
+
+    info("WiFi infineon 43439 initializing...");
+    if (cyw43_arch_init()) {
+        info("WiFi init failed, killing process...");
+        return;
+    }
+    info("Done.");
+}
+
 int main() {
     //Init pico usb
     stdio_init_all();
@@ -40,12 +106,11 @@ int main() {
     busy_wait_ms(2000);
 
     //Init pico wifi module
-    info("WiFi infineon 43439 initializing...");
-    if (cyw43_arch_init()) {
-        info("WiFi init failed, killing process...");
-        return -1;
-    }
-    info("Done.");
+    initInfineon();
+
+
+    /* initialize random seed: */
+    srand(time_us_64());
 
     //Setup used pins
     initGPIO();
@@ -99,9 +164,29 @@ int main() {
     if(watchdog_caused_reboot()) info("ALERT!!! System rebooted by watchdog, investigation required.");
     watchdog_update();
 
+    //todo load config from eeprom
+    state = CONFIGURATION_WIFI;
+
+    if (state == CONFIGURATION_WIFI) {
+        initConfigServer();
+
+        //Init pico wifi module
+        initInfineon();
+
+        // Set microcontroller indicator on
+        info("Mpu set state to on");
+        cyw43_arch_gpio_put(MPU_LED, true);
+    }
+
     // Setup wifi
-    wifi_manager.set_network("Xiaomi_52E3", "102101281026");
-    wifi_manager.connect();
+    wifi_manager.set_network(ssid, password);
+    auto wifiSuccess = wifi_manager.connect();
+
+    // Reset
+    if (!wifiSuccess) {
+        watchdog_enable(9 * 1000, false);
+        while(true) {}
+    }
 
     if (wifi_manager.connected() == 0) {
         disp.clear();
@@ -110,6 +195,11 @@ int main() {
         disp.show();
 
         busy_wait_ms(2000);
+    }
+
+    state = CONFIGURATION_HARDWARE;
+    if (state == CONFIGURATION_HARDWARE) {
+
     }
 
     loop();
@@ -122,6 +212,8 @@ void loop()
     {
         watchdog_update();
 
+        gpio_put(RELAY_POWER_24V, gpio_get(V_24_SENSE));
+
         disp.clear();
         disp.draw_string(10, 10, 2, "WAIT");
         disp.show();
@@ -129,7 +221,6 @@ void loop()
         batteryVoltage = readInternalBatteryVoltage();
         info("Internal voltage: " + to_string(batteryVoltage));
         watchdog_update();
-
 
         double batteryVoltage0 = readBatteryVoltage(RELAY_BAT_0);
         info("Battery0 voltage: " + to_string(batteryVoltage0));
@@ -159,7 +250,7 @@ void loop()
         disp.draw_string(10, 10, 2, "PACKAGE");
         disp.show();
 
-        HTTPRequestBuilder requestBuilder("api.pauleklab.com", 8443, "keep-alive", POST, "/smart-interface/measurement", JSON);
+        HTTPRequestBuilder requestBuilder(hostname, port, "keep-alive", POST, "/smart-interface/measurement", JSON);
         requestBuilder.setPayload(interfaceMeasurement.serialize());
         info(requestBuilder.build_request());
 

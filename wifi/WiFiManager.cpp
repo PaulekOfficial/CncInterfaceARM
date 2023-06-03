@@ -8,11 +8,11 @@
 #include "tls2_client.h"
 
 
-void WiFiManager::connect() {
+bool WiFiManager::connect() {
     info("Turining on wifi module");
     cyw43_arch_enable_sta_mode();
 
-
+    uint64_t startTime = get_absolute_time()._private_us_since_boot;
     trying_to_connect = true;
 
     while (link_up != 0)
@@ -77,7 +77,7 @@ void WiFiManager::connect() {
 
                 if ((startTime + (100 * 10000)) <= now) {
                     watchdog_reboot(0, 0, 0x7fffff);
-                    while (true) {};
+                    return false;
                 }
                 watchdog_update();
             }
@@ -89,6 +89,8 @@ void WiFiManager::connect() {
     trying_to_connect = false;
 
     watchdog_update();
+
+    return true;
 }
 
 void WiFiManager::disconnect() {

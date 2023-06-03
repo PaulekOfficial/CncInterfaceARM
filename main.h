@@ -30,14 +30,35 @@
 #include "utils/oledImages.h"
 #include "wifi/WiFiManager.h"
 #include <utils/pin_mapping.h>
+#include "domain/CurrentMeasurement.h"
+#include "domain/InterfaceMeasurement.h"
+#include "dhcp/dhcpserver.h"
+#include "dns/dnsserver.h"
+#include "lwip/init.h"
+#include "http_server/server.h"
 
 using namespace std;
 
 #define FIRMWARE_VERSION     "v0.1"
 
+enum State {
+    CONFIGURATION_WIFI,
+    CONFIGURATION_HARDWARE,
+    RUNNING_BATTERY,
+    RUNNING_V24
+};
+
 uint scb_orig;
 uint clock0_orig;
 uint clock1_orig;
+
+State state;
+
+const char* ssid;
+const char* password;
+
+const char* hostname;
+uint port;
 
 WiFiManager wifi_manager;
 

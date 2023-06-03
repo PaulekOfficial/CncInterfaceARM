@@ -45,18 +45,18 @@ static const char* HTTP_Content_Type_String[] = {
 
 class HTTPRequestBuilder {
 private:
-    char* host;
+    const char* host;
     uint port;
-    char* connection_type;
+    const char* connection_type;
 
     HTTP_Request_Type request_type;
-    char* request_path;
+    const char* request_path;
 
     HTTP_Content_Type content_type;
-    char* payload{};
+    const char* payload{};
 
 public:
-    HTTPRequestBuilder(char* host_, uint port_, char* connection_type_, HTTP_Request_Type request_type_, char* request_path_, HTTP_Content_Type content_type_)
+    HTTPRequestBuilder(const char* host_, uint port_, const char* connection_type_, HTTP_Request_Type request_type_, const char* request_path_, HTTP_Content_Type content_type_)
     {
         host = host_;
         port = port_;
@@ -67,35 +67,35 @@ public:
 
         content_type = content_type_;
     }
-    char* build_request();
+    const char* build_request();
 
-    char *getHost() const;
+    const char *getHost() const;
 
-    void setHost(char *host);
+    void setHost(const char *host);
 
     uint getPort() const;
 
     void setPort(uint port);
 
-    char *getConnectionType() const;
+    const char *getConnectionType() const;
 
-    void setConnectionType(char *connectionType);
+    void setConnectionType(const char *connectionType);
 
     HTTP_Request_Type getRequestType() const;
 
     void setRequestType(HTTP_Request_Type requestType);
 
-    char *getRequestPath() const;
+    const char *getRequestPath() const;
 
-    void setRequestPath(char *requestPath);
+    void setRequestPath(const char *requestPath);
 
     HTTP_Content_Type getContentType() const;
 
     void setContentType(HTTP_Content_Type contentType);
 
-    char *getPayload() const;
+    const char *getPayload() const;
 
-    void setPayload(char *payload);
+    void setPayload(const char *payload);
 };
 
 

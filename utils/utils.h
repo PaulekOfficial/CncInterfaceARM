@@ -45,4 +45,6 @@ void initI2C();
 void initGPIO();
 void initPullUps();
 
+std::string gen_random_string(const int len);
+
 //float round(float var);

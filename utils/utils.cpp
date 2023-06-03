@@ -285,6 +285,7 @@ void initGPIO() {
     gpio_init(RELAY_BAT_1);
     gpio_init(MOSFET_BUZZER);
     gpio_init(MOSFET_LCD);
+    gpio_init(V_24_SENSE);
     //gpio_set_function(MPU_LED, GPIO_FUNC_PWM);
 
     // Setup pwm
@@ -303,10 +304,28 @@ void initGPIO() {
     gpio_set_dir(MOSFET_LCD, GPIO_OUT);
     //gpio_set_dir(MPU_LED, GPIO_OUT);
     gpio_set_dir(BUZZER, GPIO_OUT);
+
+
+    gpio_set_dir(V_24_SENSE, GPIO_IN);
 }
 
 void initPullUps() {
     info("Pull ups initialization...");
     gpio_pull_up(BUZZER);
+}
+
+std::string gen_random_string(const int len) {
+    static const char alphanum[] =
+            "0123456789"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz";
+    std::string tmp_s;
+    tmp_s.reserve(len);
+
+    for (int i = 0; i < len; ++i) {
+        tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+    }
+
+    return tmp_s;
 }
 

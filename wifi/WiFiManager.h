@@ -30,7 +30,7 @@ private:
 public:
     //void init();
     void set_network(std::string ssid_, std::string password_) { ssid = ssid_; password = password_; }
-    void connect();
+    bool connect();
     static void disconnect();
 
     [[maybe_unused]] static char* http_request(HTTPRequestBuilder requestBuilder);

@@ -48,7 +48,7 @@ struct altcp_tls_config {
 
 static struct altcp_tls_config *tls_config = NULL;
 
-static char* http_request_string;
+static const char* http_request_string;
 static uint portt;
 
 class tls2_client {

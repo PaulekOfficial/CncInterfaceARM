@@ -22,6 +22,7 @@
 
 #define BUZZER                 10
 #define BUTTON                 19
+#define V_24_SENSE             6
 
 #define POWER_24V_READY         7
 
