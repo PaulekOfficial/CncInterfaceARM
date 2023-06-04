@@ -19,7 +19,7 @@ bool WiFiManager::connect() {
     {
         busy_wait_ms(2500);
         watchdog_update();
-        link_up = cyw43_arch_wifi_connect_timeout_ms(ssid.c_str(), password.c_str(), CYW43_AUTH_WPA2_MIXED_PSK, 6000);
+        link_up = cyw43_arch_wifi_connect_timeout_ms(ssid.c_str(), password.c_str(), CYW43_AUTH_WPA2_MIXED_PSK, 25000);
         watchdog_update();
 
         for (int i = 0; i < 15; i++)

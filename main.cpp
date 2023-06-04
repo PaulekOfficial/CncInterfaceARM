@@ -86,11 +86,33 @@ void initConfigServer() {
     disp.draw_string(10, 0, 1, "SAVING DATA...");
     disp.show();
 
-    memory.writeBoolean(0, true);
-    memory.writeString(1, ssid);
-    memory.writeString(18, password);
-    memory.writeString(69, hostname);
-    memory.writeString(89, to_string(port));
+    uint trys = 0;
+    while (true) {
+        info("Saving data to eeprom...");
+
+        memory.writeBoolean(0, true);
+        memory.writeString(1, ssid);
+        memory.writeString(18, password);
+        memory.writeString(69, hostname);
+        memory.writeString(89, to_string(port));
+
+        auto readSsid = memory.readString(1);
+        auto readPassword = memory.readString(18);
+        auto readHostname = memory.readString(69);
+        auto readPort = atoi(memory.readString(89).c_str());
+
+        if (trys >= 10) {
+            watchdog_enable(1, false);
+            while (true) {}
+        }
+
+        if (readSsid == ssid || readPassword == password || readHostname == hostname || readPort == port) {
+            break;
+        }
+
+        trys++;
+    }
+    info("Saved!");
 
     tcpServerClose(state);
     dns_server_deinit(&dns_server);
