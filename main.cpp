@@ -82,6 +82,16 @@ void initConfigServer() {
     hostname = hostname_;
     port = port_;
 
+    disp.clear();
+    disp.draw_string(10, 0, 1, "SAVING DATA...");
+    disp.show();
+
+    memory.writeBoolean(0, true);
+    memory.writeString(1, ssid);
+    memory.writeString(18, password);
+    memory.writeString(69, hostname);
+    memory.writeString(89, to_string(port));
+
     tcpServerClose(state);
     dns_server_deinit(&dns_server);
     dhcp_server_deinit(&dhcp_server);
@@ -164,8 +174,68 @@ int main() {
     if(watchdog_caused_reboot()) info("ALERT!!! System rebooted by watchdog, investigation required.");
     watchdog_update();
 
-    //todo load config from eeprom
-    state = CONFIGURATION_WIFI;
+    if (gpio_get(BUTTON)) {
+        uint64_t startTime = get_absolute_time()._private_us_since_boot;
+        while (gpio_get(BUTTON)) {
+            uint64_t now = get_absolute_time()._private_us_since_boot;
+
+            std::stringstream in;
+            in << "in ";
+            in << to_string((now - startTime) / 1000 - 10);
+
+            disp.clear();
+            disp.draw_string(10, 0, 1, "ERASE MEMORY");
+            disp.draw_string(10, 10, 1, in.str().c_str());
+            disp.show();
+
+            if ((startTime + 10000) <= now) {
+                disp.clear();
+                disp.draw_string(10, 0, 1, "ERASING...");
+                disp.show();
+
+                for (int t = 0; t < 3; t++) {
+                    for(int i = 0; i < 128; i++) {
+                        memory.write(i, 0x00);
+                    }
+                }
+
+                break;
+            }
+            watchdog_update();
+        }
+    }
+
+
+    // Check if data stored in eeprom
+    if (!memory.readBoolean(0)) {
+        state = CONFIGURATION_WIFI;
+    } else {
+        // ssid 16 chars
+        // password 30 chars
+        // hostname 20 chars
+        // port 4 chars
+        // add to offset 1 because of 0x00 end of string
+
+        //load from memory
+        info("Loading data from memory...");
+        ssid = memory.readString(1);
+        password = memory.readString(18);
+        hostname = memory.readString(69);
+        port = atoi(memory.readString(89).c_str());
+        info("Loaded!");
+
+        printf("Loaded data: \n ssid: %s \n password: %s \n hostname: %s \n port: %d \n", ssid.c_str(), password.c_str(), hostname.c_str(), port);
+
+        bool v24detect = gpio_get(V_24_SENSE);
+        if (v24detect) {
+            gpio_put(RELAY_POWER_24V, true);
+            state = RUNNING_V24;
+        }
+
+        if (!v24detect) {
+            state = RUNNING_BATTERY;
+        }
+    }
 
     if (state == CONFIGURATION_WIFI) {
         initConfigServer();
@@ -198,7 +268,6 @@ int main() {
         busy_wait_ms(2000);
     }
 
-    state = CONFIGURATION_HARDWARE;
     if (state == CONFIGURATION_HARDWARE) {
 
     }

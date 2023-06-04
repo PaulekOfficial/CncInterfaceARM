@@ -36,6 +36,7 @@
 #include "dns/dnsserver.h"
 #include "lwip/init.h"
 #include "http_server/server.h"
+#include "eeprom/eeprom.h"
 
 using namespace std;
 
@@ -61,6 +62,7 @@ std::string hostname;
 uint port;
 
 WiFiManager wifi_manager;
+eeprom memory(0x50, I2C_ID);
 
 bool wakeUp = false;
 bool sleep = false;

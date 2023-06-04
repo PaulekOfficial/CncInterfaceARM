@@ -32,7 +32,6 @@ SOFTWARE.
 
 #include <pico/stdlib.h>
 #include <hardware/i2c.h>
-#include <hardware/i2c.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
