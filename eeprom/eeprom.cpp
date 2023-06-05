@@ -25,7 +25,7 @@ void eeprom::write(unsigned int address_, uint8_t data) {
         }
 
         // Writing in I2C EEPROM takes ~5ms (even if I2C writing already done)
-        busy_wait_ms(100);
+        busy_wait_ms(5);
 
         // Verify
         uint8_t verify = read(address_);
@@ -51,7 +51,7 @@ uint8_t eeprom::read(unsigned int address_) {
                 //printf("[EEPROM] wrote successfully %lu bytes!\n", sizeof d);
                 break;
         }
-        busy_wait_ms(50);
+        busy_wait_ms(100);
 
         i2c_read_blocking(i2c_inst, address, &readData, 1, false);
         busy_wait_ms(100);
@@ -126,6 +126,28 @@ void eeprom::writeBoolean(unsigned int address_, bool value) {
 bool eeprom::readBoolean(unsigned int address_) {
     uint8_t value = read(address_);
     return value == 0x01;
+}
+
+uint8_t *eeprom::read(unsigned int address_, uint size_) {
+    uint8_t *readData = nullptr;
+
+    uint8_t d[1] = {(uint8_t) address_};
+
+    switch (i2c_write_blocking(i2c_inst, address, d, sizeof(d) / sizeof(uint8_t), true)) {
+        case PICO_ERROR_GENERIC:
+            printf("[EEPROM] addr not acknowledged!\n");
+        case PICO_ERROR_TIMEOUT:
+            printf("[EEPROM] timeout!\n");
+            break;
+        default:
+            //printf("[EEPROM] wrote successfully %lu bytes!\n", sizeof d);
+            break;
+    }
+    busy_wait_ms(5);
+
+    i2c_read_blocking(i2c_inst, address, readData, size_, false);
+
+    return readData;
 }
 
 

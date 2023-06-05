@@ -12,9 +12,9 @@ bool WiFiManager::connect() {
     info("Turining on wifi module");
     cyw43_arch_enable_sta_mode();
 
-    uint64_t startTime = get_absolute_time()._private_us_since_boot;
     trying_to_connect = true;
 
+    int linkStatus = 0;
     while (link_up != 0)
     {
         busy_wait_ms(2500);
@@ -22,50 +22,18 @@ bool WiFiManager::connect() {
         link_up = cyw43_arch_wifi_connect_timeout_ms(ssid.c_str(), password.c_str(), CYW43_AUTH_WPA2_MIXED_PSK, 25000);
         watchdog_update();
 
-        for (int i = 0; i < 15; i++)
-        {
-            busy_wait_ms(1000);
-            watchdog_update();
+        linkStatus = cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA);
+
+        if (linkStatus == CYW43_LINK_BADAUTH) {
+            return false;
         }
 
-        bool hardReset = false;
-        wifiConnectionTrys++;
-
-        if (wifiConnectionTrys <= 5 && !link_up)
-        {
-            // Display status
-            char title[32];
-            sprintf(title, "WiFi E:%d", wifiConnectionTrys);
-
-            for (int i = 0; i < 30; i++)
-            {
-                busy_wait_ms(1000);
-                watchdog_update();
-            }
-        }
-
+        bool hardReset;
         if (wifiConnectionTrys >= 5 && !link_up)
         {
             hardReset = true;
             wifiConnectionTrys = 0;
             hardResetAttempts++;
-        }
-
-        if (hardReset)
-        {
-            info("ESP8266 init reset fail, performing hard reset.");
-
-            for (int i = 0; i < 60; i++)
-            {
-                busy_wait_ms(1000);
-                watchdog_update();
-            }
-
-            for (int i = 0; i < 60; i++)
-            {
-                busy_wait_ms(1000);
-                watchdog_update();
-            }
         }
 
         if (hardResetAttempts >= 5 && !link_up)
@@ -75,13 +43,14 @@ bool WiFiManager::connect() {
             {
                 uint64_t now = get_absolute_time()._private_us_since_boot;
 
-                if ((startTime + (100 * 10000)) <= now) {
-                    watchdog_reboot(0, 0, 0x7fffff);
+                if ((startTime + (10 * 1000)) <= now) {
+                    watchdog_enable(1000, false);
                     return false;
                 }
                 watchdog_update();
             }
         }
+        wifiConnectionTrys++;
     }
     // Signal that Wi-Fi works fine
     watchdog_update();

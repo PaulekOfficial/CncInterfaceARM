@@ -105,20 +105,90 @@ void sleep_run_from_dormant_source(dormant_source_t dormant_source) {
 
 void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig) {
 
-    //Re-enable ring Oscillator control
-    rosc_write(&xosc_hw->ctrl, XOSC_CTRL_ENABLE_BITS);
-    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
-
-    //reset procs back to default
-    scb_hw->scr = scb_orig;
-    clocks_hw->sleep_en1 = clock1_orig;
-    clocks_hw->sleep_en0 = clock0_orig;
+//    //Re-enable ring Oscillator control
+//    rosc_write(&xosc_hw->ctrl, XOSC_CTRL_ENABLE_BITS);
+//    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
+//
+//    //reset procs back to default
+//    scb_hw->scr = scb_orig;
+//    clocks_hw->sleep_en1 = clock1_orig;
+//    clocks_hw->sleep_en0 = clock0_orig;
 
     //reset clocks
-    clocks_init();
-    stdio_init_all();
+//    clocks_init();
+//    stdio_init_all();
 
-    return;
+    // Disable resus that may be enabled from previous software
+    clocks_hw->resus.ctrl = 0;
+
+    // Enable the xosc
+    xosc_init();
+
+    // Before we touch PLLs, switch sys and ref cleanly away from their aux sources.
+    hw_clear_bits(&clocks_hw->clk[clk_sys].ctrl, CLOCKS_CLK_SYS_CTRL_SRC_BITS);
+    while (clocks_hw->clk[clk_sys].selected != 0x1)
+        tight_loop_contents();
+    hw_clear_bits(&clocks_hw->clk[clk_ref].ctrl, CLOCKS_CLK_REF_CTRL_SRC_BITS);
+    while (clocks_hw->clk[clk_ref].selected != 0x1)
+        tight_loop_contents();
+
+    /// \tag::pll_settings[]
+    // Configure PLLs
+    //                   REF     FBDIV VCO            POSTDIV
+    // PLL SYS: 12 / 1 = 12MHz * 125 = 1500MHz / 6 / 2 = 125MHz
+    // PLL USB: 12 / 1 = 12MHz * 100 = 1200MHz / 5 / 5 =  48MHz
+    /// \end::pll_settings[]
+
+    /// \tag::pll_init[]
+    pll_init(pll_sys, 1, 1500 * MHZ, 6, 2);
+    pll_init(pll_usb, 1, 1200 * MHZ, 5, 5);
+    /// \end::pll_init[]
+
+    // Configure clocks
+    // CLK_REF = XOSC (12MHz) / 1 = 12MHz
+    clock_configure(clk_ref,
+                    CLOCKS_CLK_REF_CTRL_SRC_VALUE_XOSC_CLKSRC,
+                    0, // No aux mux
+                    12 * MHZ,
+                    12 * MHZ);
+
+    /// \tag::configure_clk_sys[]
+    // CLK SYS = PLL SYS (125MHz) / 1 = 125MHz
+    clock_configure(clk_sys,
+                    CLOCKS_CLK_SYS_CTRL_SRC_VALUE_CLKSRC_CLK_SYS_AUX,
+                    CLOCKS_CLK_SYS_CTRL_AUXSRC_VALUE_CLKSRC_PLL_SYS,
+                    125 * MHZ,
+                    125 * MHZ);
+    /// \end::configure_clk_sys[]
+
+    // CLK USB = PLL USB (48MHz) / 1 = 48MHz
+    clock_configure(clk_usb,
+                    0, // No GLMUX
+                    CLOCKS_CLK_USB_CTRL_AUXSRC_VALUE_CLKSRC_PLL_USB,
+                    48 * MHZ,
+                    48 * MHZ);
+
+    // CLK ADC = PLL USB (48MHZ) / 1 = 48MHz
+    clock_configure(clk_adc,
+                    0, // No GLMUX
+                    CLOCKS_CLK_ADC_CTRL_AUXSRC_VALUE_CLKSRC_PLL_USB,
+                    48 * MHZ,
+                    48 * MHZ);
+
+    // CLK RTC = PLL USB (48MHz) / 1024 = 46875Hz
+    clock_configure(clk_rtc,
+                    0, // No GLMUX
+                    CLOCKS_CLK_RTC_CTRL_AUXSRC_VALUE_CLKSRC_PLL_USB,
+                    48 * MHZ,
+                    46875);
+
+    // CLK PERI = clk_sys. Used as reference clock for Peripherals. No dividers so just select and enable
+    // Normally choose clk_sys or clk_usb
+    clock_configure(clk_peri,
+                    0,
+                    CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS,
+                    125 * MHZ,
+                    125 * MHZ);
 }
 
 // Go to sleep until woken up by the RTC

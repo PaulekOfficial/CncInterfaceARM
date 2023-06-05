@@ -8,6 +8,8 @@ static void alarm_callback() {
 
 void core1_entry() {
     while (true) {
+
+
         if (wifi_manager.connecting()) {
             disp.clear();
             disp.bmp_show_image_with_offset(__wifi_bmp_data, 226, 5, 5);
@@ -330,6 +332,9 @@ void loop()
         CurrentMeasurement internalBattery("0", INTERNAL_BATTERY_VOLTAGE, batteryVoltage);
         measurements.push_back(internalBattery);
 
+        CurrentMeasurement temp("0", TEMPERATURE, temperature);
+        measurements.push_back(temp);
+
         CurrentMeasurement battery0("0", BATTERY_VOLTAGE, batteryVoltage0);
         measurements.push_back(battery0);
 
@@ -437,7 +442,6 @@ void awake() {
     disp.draw_string(10, 10, 1, "Waking up...");
     disp.show();
 
-    watchdog_enable(9 * 1000, false);
     watchdog_update();
     recover_from_sleep(0, 4294967295, 32767);
     watchdog_update();
@@ -450,8 +454,24 @@ void awake() {
     info("Done.");
     cyw43_arch_gpio_put(MPU_LED, true);
 
-    // Setup wifi
-    //setupWiFiModule("Xiaomi_52E3", "102101281026");
+    // Setup Wi-Fi
+    //wifi_manager.set_network(ssid, password);
+    auto wifiSuccess = wifi_manager.connect();
+
+    // Reset
+    if (!wifiSuccess) {
+        watchdog_enable(1000, false);
+        while(true) {}
+    }
+
+    if (wifi_manager.connected() == 0) {
+        disp.clear();
+        disp.bmp_show_image_with_offset(__wifi_bmp_data, 226, 5, 5);
+        disp.draw_string(50, 13, 1, "Connected!");
+        disp.show();
+
+        busy_wait_ms(2000);
+    }
 }
 
 void shutdown() {

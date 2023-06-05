@@ -12,12 +12,14 @@
 enum CurrentType {
     BATTERY_VOLTAGE,
     INTERNAL_BATTERY_VOLTAGE,
-    CURRENT
+    CURRENT,
+    TEMPERATURE
 };
 static const char* CurrentType_String[] = {
         "BATTERY_VOLTAGE",
         "INTERNAL_BATTERY_VOLTAGE",
-        "CURRENT"
+        "CURRENT",
+        "TEMPERATURE"
 };
 
 class CurrentMeasurement {

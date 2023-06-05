@@ -37,7 +37,7 @@ double readBatteryVoltage(int batteryMosfet) {
     // Turn on measurement channel
     gpio_put(batteryMosfet, true);
     adc_select_input(0);
-    busy_wait_ms(2000);
+    busy_wait_ms(200);
 
     adc_capture(sample_buf, N_SAMPLES);
 
@@ -52,7 +52,7 @@ double readBatteryVoltage(int batteryMosfet) {
 
 double readInternalBatteryVoltage() {
     adc_select_input(2);
-    busy_wait_ms(2000);
+    busy_wait_ms(200);
     adc_capture(sample_buf, N_SAMPLES);
 
     double voltage = convert_adc_to_voltage(sample_buf[500]);

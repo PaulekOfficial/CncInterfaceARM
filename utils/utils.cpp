@@ -270,7 +270,7 @@ void initADC() {
 }
 void initI2C() {
     info("I2C register interface initialization...");
-    i2c_init(I2C_ID, 400 * 1000);
+    i2c_init(I2C_ID, 100 * 1000);
     info("setting gpio i2c functions");
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);

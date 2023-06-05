@@ -34,6 +34,8 @@ public:
     std::string readString(unsigned int address_, uint size_);
 
     uint8_t read(unsigned int address_);
+
+    uint8_t* read(unsigned int address_, uint size_);
 };
 
 
