@@ -27,7 +27,7 @@ void core1_entry() {
                 dots = 0;
             }
 
-            watchdog_update();
+            
         }
         busy_wait_ms(1000);
     }
@@ -196,7 +196,7 @@ int main() {
     info("Watchdog system initialization...");
     //watchdog_enable(9 * 1000, false);
     if(watchdog_caused_reboot()) info("ALERT!!! System rebooted by watchdog, investigation required.");
-    watchdog_update();
+    
 
     if (gpio_get(BUTTON)) {
         uint64_t startTime = get_absolute_time()._private_us_since_boot;
@@ -225,7 +225,7 @@ int main() {
 
                 break;
             }
-            watchdog_update();
+            
         }
     }
 
@@ -274,6 +274,7 @@ int main() {
     }
 
     // Setup wifi
+    wifi_manager.init();
     wifi_manager.set_network(ssid, password);
     auto wifiSuccess = wifi_manager.connect();
 
@@ -299,93 +300,84 @@ int main() {
     loop();
 }
 
-void loop()
+[[noreturn]] void loop()
 {
     info("Entering main loop.");
-    while (true)
+    gpio_put(RELAY_POWER_24V, gpio_get(V_24_SENSE));
+
+    disp.clear();
+    disp.draw_string(10, 10, 2, "WAIT");
+    disp.show();
+
+    batteryVoltage = readInternalBatteryVoltage();
+    info("Internal voltage: " + to_string(batteryVoltage));
+
+
+    double batteryVoltage0 = readBatteryVoltage(RELAY_BAT_0);
+    info("Battery0 voltage: " + to_string(batteryVoltage0));
+
+
+    double batteryVoltage1 = readBatteryVoltage(RELAY_BAT_1);
+    info("Battery1 voltage: " + to_string(batteryVoltage1));
+
+
+    float temperature = readInternalTemperature();
+    bool highVoltagePresent = gpio_get(POWER_24V_READY);
+
+
+    std::list<CurrentMeasurement> measurements;
+    CurrentMeasurement internalBattery("0", INTERNAL_BATTERY_VOLTAGE, batteryVoltage);
+    measurements.push_back(internalBattery);
+
+    CurrentMeasurement temp("0", TEMPERATURE, temperature);
+    measurements.push_back(temp);
+
+    CurrentMeasurement battery0("0", BATTERY_VOLTAGE, batteryVoltage0);
+    measurements.push_back(battery0);
+
+    CurrentMeasurement battery1("1", BATTERY_VOLTAGE, batteryVoltage1);
+    measurements.push_back(battery1);
+
+    InterfaceMeasurement interfaceMeasurement("352da5cf-7e92-45ca-88a5-639e5dc2f592", BATTERY_MODE, measurements);
+
+    disp.clear();
+    disp.draw_string(10, 10, 2, "PACKAGE");
+    disp.show();
+
+    HTTPRequestBuilder requestBuilder(hostname.data(), port, "keep-alive", POST, "/smart-interface/measurement", JSON);
+    requestBuilder.setPayload(interfaceMeasurement.serialize());
+    info(requestBuilder.build_request());
+
+    disp.clear();
+    disp.draw_string(10, 10, 2, "SEND");
+    disp.show();
+
+    WiFiManager::http_request(requestBuilder);
+
+    writeInfo(temperature, batteryVoltage0, batteryVoltage1, batteryVoltage, highVoltagePresent);
+    if (!highVoltagePresent)
     {
-        watchdog_update();
+        shutdown();
 
-        gpio_put(RELAY_POWER_24V, gpio_get(V_24_SENSE));
+        sleep_run_from_rosc();
+        setupAlarm();
 
-        disp.clear();
-        disp.draw_string(10, 10, 2, "WAIT");
-        disp.show();
+        sleep = true;
 
-        batteryVoltage = readInternalBatteryVoltage();
-        info("Internal voltage: " + to_string(batteryVoltage));
-        watchdog_update();
+        do {
+            bool buttonPressed = gpio_get(BUTTON);
+            if (buttonPressed || wakeUp) {
+                awake();
 
-        double batteryVoltage0 = readBatteryVoltage(RELAY_BAT_0);
-        info("Battery0 voltage: " + to_string(batteryVoltage0));
-        watchdog_update();
-
-        double batteryVoltage1 = readBatteryVoltage(RELAY_BAT_1);
-        info("Battery1 voltage: " + to_string(batteryVoltage1));
-        watchdog_update();
-
-        float temperature = readInternalTemperature();
-        bool highVoltagePresent = gpio_get(POWER_24V_READY);
-        watchdog_update();
-
-        std::list<CurrentMeasurement> measurements;
-        CurrentMeasurement internalBattery("0", INTERNAL_BATTERY_VOLTAGE, batteryVoltage);
-        measurements.push_back(internalBattery);
-
-        CurrentMeasurement temp("0", TEMPERATURE, temperature);
-        measurements.push_back(temp);
-
-        CurrentMeasurement battery0("0", BATTERY_VOLTAGE, batteryVoltage0);
-        measurements.push_back(battery0);
-
-        CurrentMeasurement battery1("1", BATTERY_VOLTAGE, batteryVoltage1);
-        measurements.push_back(battery1);
-
-        InterfaceMeasurement interfaceMeasurement("352da5cf-7e92-45ca-88a5-639e5dc2f592", BATTERY_MODE, measurements);
-
-        disp.clear();
-        disp.draw_string(10, 10, 2, "PACKAGE");
-        disp.show();
-
-        HTTPRequestBuilder requestBuilder(hostname.data(), port, "keep-alive", POST, "/smart-interface/measurement", JSON);
-        requestBuilder.setPayload(interfaceMeasurement.serialize());
-        info(requestBuilder.build_request());
-
-        disp.clear();
-        disp.draw_string(10, 10, 2, "SEND");
-        disp.show();
-
-        WiFiManager::http_request(requestBuilder);
-
-        writeInfo(temperature, batteryVoltage0, batteryVoltage1, batteryVoltage, highVoltagePresent);
-        if (!highVoltagePresent)
-        {
-            watchdog_update();
-            shutdown();
-
-            sleep_run_from_rosc();
-            setupAlarm();
-
-            while (true)
-            {
-                sleep = true;
-                bool buttonPressed = gpio_get(BUTTON);
-                if (buttonPressed || wakeUp) {
-                    awake();
-
-                    wakeUp = false;
-                    rtc_disable_alarm();
-                    watchdog_update();
-                    break;
-                }
-
-                watchdog_update();
+                wakeUp = false;
+                sleep = false;
             }
-            sleep = false;
-        }
+        } while (sleep);
 
-        watchdog_update();
+        rtc_disable_alarm();
     }
+
+    loop();
 }
 
 void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage1, double internalBattery, bool highVoltagePresent) {
@@ -396,7 +388,7 @@ void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage
     char subtitle2[32];
     char subtitle3[32];
     sprintf(subtitle, "VBAT:%2.2fV", internalBattery);
-    watchdog_update();
+    
 
     busy_wait_ms(2000);
     sprintf(subtitle2, "Bateria 0: %2.2fV", batteryVoltage0);
@@ -411,9 +403,9 @@ void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage
     disp.draw_string(0, 20, 1, subtitle3);
     disp.show();
 
-    watchdog_update();
+    
     busy_wait_ms(8000);
-    watchdog_update();
+    
 
     if (highVoltagePresent) {
         sprintf(subtitle, "Zasilanie 24V");
@@ -427,14 +419,12 @@ void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage
     disp.draw_string(0, 10, 1, subtitle);
     disp.show();
 
-    watchdog_update();
+    
     busy_wait_ms(2000);
-    watchdog_update();
+    
 }
 
 void awake() {
-    watchdog_update();
-
     disp.init(128, 32, 0x3C, I2C_ID);
     disp.poweron();
 
@@ -442,9 +432,7 @@ void awake() {
     disp.draw_string(10, 10, 1, "Waking up...");
     disp.show();
 
-    watchdog_update();
     recover_from_sleep(0, 4294967295, 32767);
-    watchdog_update();
 
     info("WiFi infineon 43439 reinitializing...");
     if (cyw43_arch_init()) {
@@ -454,8 +442,15 @@ void awake() {
     info("Done.");
     cyw43_arch_gpio_put(MPU_LED, true);
 
+    multicore_reset_core1();
+    multicore_launch_core1(core1_entry);
+
+    watchdog_enable(1000, false);
+    while(true) {}
+
     // Setup Wi-Fi
-    //wifi_manager.set_network(ssid, password);
+    wifi_manager.init();
+    wifi_manager.set_network(ssid, password);
     auto wifiSuccess = wifi_manager.connect();
 
     // Reset
@@ -483,12 +478,8 @@ void shutdown() {
     disp.poweroff();
     disp.deinit();
 
-    watchdog_update();
-
     cyw43_arch_deinit();
     gpio_put(MOSFET_LCD, false);
-
-    watchdog_update();
 }
 
 void setupAlarm() {

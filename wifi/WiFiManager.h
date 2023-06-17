@@ -23,12 +23,14 @@ private:
     std::string ssid;
     std::string password;
 
-    int wifiConnectionTrys = 0;
-    int hardResetAttempts = 0;
-    bool trying_to_connect = false;
-    int link_up = -1;
+    int wifiConnectionTrys;
+    int hardResetAttempts;
+    bool trying_to_connect;
+    int link_up;
 public:
-    //void init();
+    virtual ~WiFiManager();
+
+    void init();
     void set_network(std::string ssid_, std::string password_) { ssid = ssid_; password = password_; }
     bool connect();
     static void disconnect();

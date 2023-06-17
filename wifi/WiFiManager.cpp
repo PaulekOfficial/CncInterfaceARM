@@ -103,3 +103,16 @@ void WiFiManager::disconnect() {
 
     return nullptr;
 }
+
+void WiFiManager::init() {
+    ssid = "";
+    password = "";
+
+    wifiConnectionTrys = 0;
+    hardResetAttempts = 0;
+    trying_to_connect = false;
+    link_up = -1;
+}
+
+WiFiManager::~WiFiManager() {
+}

@@ -124,7 +124,13 @@ void eeprom::writeBoolean(unsigned int address_, bool value) {
 }
 
 bool eeprom::readBoolean(unsigned int address_) {
-    uint8_t value = read(address_);
+    uint8_t value = 0xFF;
+    while(value != 0x00 && value != 0x01) {
+        value = read(address_);
+        busy_wait_ms(5);
+    }
+
+
     return value == 0x01;
 }
 
@@ -149,5 +155,4 @@ uint8_t *eeprom::read(unsigned int address_, uint size_) {
 
     return readData;
 }
-
 

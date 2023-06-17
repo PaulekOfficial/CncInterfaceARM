@@ -12,6 +12,7 @@
 #include <string>
 
 #define NUMBER_OF_BLOCKS 128
+#define FLASH_TARGET_OFFSET (256 * 1024)
 
 class eeprom {
 private:

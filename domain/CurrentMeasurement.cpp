@@ -79,4 +79,5 @@ bool CurrentMeasurement::operator!=(const CurrentMeasurement &rhs) const {
 
 CurrentMeasurement::~CurrentMeasurement() {
     delete name;
+    value = 0;
 }

@@ -110,4 +110,7 @@ bool InterfaceMeasurement::operator!=(const InterfaceMeasurement &rhs) const {
 
 InterfaceMeasurement::~InterfaceMeasurement() {
     delete interfaceUUID;
+    measurementList.clear();
+    std::destroy(measurementList.begin(), measurementList.end());
+    timestamp = 0;
 }

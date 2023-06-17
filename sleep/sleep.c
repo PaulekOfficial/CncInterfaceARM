@@ -105,21 +105,14 @@ void sleep_run_from_dormant_source(dormant_source_t dormant_source) {
 
 void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig) {
 
-//    //Re-enable ring Oscillator control
-//    rosc_write(&xosc_hw->ctrl, XOSC_CTRL_ENABLE_BITS);
-//    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
-//
-//    //reset procs back to default
-//    scb_hw->scr = scb_orig;
-//    clocks_hw->sleep_en1 = clock1_orig;
-//    clocks_hw->sleep_en0 = clock0_orig;
+    //Re-enable ring Oscillator control
+    rosc_write(&xosc_hw->ctrl, XOSC_CTRL_ENABLE_BITS);
+    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
 
-    //reset clocks
-//    clocks_init();
-//    stdio_init_all();
-
-    // Disable resus that may be enabled from previous software
-    clocks_hw->resus.ctrl = 0;
+    //reset procs back to default
+    scb_hw->scr = scb_orig;
+    clocks_hw->sleep_en1 = clock1_orig;
+    clocks_hw->sleep_en0 = clock0_orig;
 
     // Enable the xosc
     xosc_init();
@@ -189,6 +182,9 @@ void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig) {
                     CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS,
                     125 * MHZ,
                     125 * MHZ);
+
+    // Reconfigure uart with new clocks
+    setup_default_uart();
 }
 
 // Go to sleep until woken up by the RTC

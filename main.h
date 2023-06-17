@@ -71,7 +71,7 @@ double batteryVoltage = 4.5;
 int dots = 0;
 bool goingUp = false;
 
-void loop();
+[[noreturn]] void loop();
 void shutdown();
 void awake();
 void setupAlarm();

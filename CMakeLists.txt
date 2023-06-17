@@ -45,6 +45,7 @@ target_link_libraries(interface_pico
         pico_lwip_http
         pico_lwip_mbedtls
         pico_mbedtls
+        hardware_flash
         pico_multicore
         hardware_pwm
         hardware_adc
