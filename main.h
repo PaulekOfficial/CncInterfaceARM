@@ -15,6 +15,7 @@
 #include <hardware/spi.h>
 #include <hardware/watchdog.h>
 #include <pico/stdio_usb.h>
+#include <hardware/clocks.h>
 #include <hardware/regs/intctrl.h>
 #include "pico/cyw43_arch.h"
 #include <hardware/irq.h>
@@ -37,6 +38,8 @@
 #include "lwip/init.h"
 #include "http_server/server.h"
 #include "eeprom/eeprom.h"
+#include "utils/configurationAssist.cpp"
+#include "utils/sleepUtils.cpp"
 
 using namespace std;
 
