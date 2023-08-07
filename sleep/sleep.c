@@ -116,7 +116,10 @@ void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig) {
 
     //reset clocks
     clocks_init();
-    stdio_init_all();
+//    stdio_init_all();
+    setup_default_uart();
+
+    return;
 }
 
 // Go to sleep until woken up by the RTC
