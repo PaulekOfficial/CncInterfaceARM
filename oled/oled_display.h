@@ -50,8 +50,13 @@ private:
     bool external_vcc;    /**< whether display uses external vcc */
     uint8_t *buffer;    /**< display buffer */
     size_t bufsize;        /**< buffer size */
+    bool disabled;
 
     void fancy_write(i2c_inst_t *i2c, uint8_t addr, const uint8_t *src, size_t len, char *name) {
+        if (disabled) {
+            return;
+        }
+
         switch(i2c_write_blocking(i2c, addr, src, len, false)) {
             case PICO_ERROR_GENERIC:
                 printf("[%s] addr not acknowledged!\n", name);
@@ -66,6 +71,10 @@ private:
     }
 
     void write(uint8_t val) {
+        if (disabled) {
+            return;
+        }
+
         uint8_t d[2]= {0x00, val};
         fancy_write(i2c_i, address, d, 2, "Oled Display");
     }
@@ -138,6 +147,10 @@ public:
 
 */
         void poweron();
+
+        void disableDisplay();
+
+       void enableDisplay();
 
 /**
 	@brief set contrast of display

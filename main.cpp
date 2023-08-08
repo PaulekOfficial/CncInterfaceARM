@@ -1,21 +1,18 @@
-#include <hardware/pll.h>
 #include "main.h"
+#include "hardware/rosc.h"
 
 //TODO DEBUG GPIO 5-2
 
-void core1_entry() {
+[[noreturn]] void core1_entry() {
     while (true) {
         if (wifi_manager.connecting()) {
-            if (batteryVoltage >= 3.80) {
-                disp.clear();
-                disp.bmp_show_image_with_offset(__wifi_bmp_data, 226, 5, 5);
-                disp.draw_string(40, 0, 1, ssid.c_str());
-            }
+            disp.clear();
+            disp.bmp_show_image_with_offset(__wifi_bmp_data, 226, 5, 5);
+            disp.draw_string(40, 0, 1, simpleWifiCredentials.ssid.c_str());
 
             int x = 50;
             for (int i = 0; i < dots; i++) {
-                cyw43_arch_gpio_put(MPU_LED, !cyw43_arch_gpio_get(MPU_LED));
-                if (batteryVoltage >= 3.80) disp.draw_string(x, 6, 2, ".");
+                disp.draw_string(x, 6, 2, ".");
                 x += 15;
             }
             disp.show();
@@ -24,22 +21,26 @@ void core1_entry() {
             if (dots > 4) {
                 dots = 0;
             }
-
-
+        }
+        if(!watchdogInterrupt) {
+            watchdog_update();
         }
         busy_wait_ms(1000);
     }
 }
 
-
-static void alarm_callback() {
-    sleep = false;
+static void send_callback() {
+    watchdogInterrupt = true;
 }
 
-void awakeWifiSetup() {
+static void alarm_callback() {
+    rtcInterrupt = true;
+}
+
+[[noreturn]] void awakeWifiSetup() {
     // Setup Wi-Fi
     wifi_manager.init();
-    wifi_manager.set_network(ssid, password);
+    wifi_manager.set_network(simpleWifiCredentials.ssid, simpleWifiCredentials.password);
     bool wifiSuccess = wifi_manager.connect();
 
     // Reset
@@ -65,6 +66,7 @@ void initInfineon() {
         info("WiFi init failed, killing process...");
         return;
     }
+    cyw43_wifi_pm(&cyw43_state, CYW43_AGGRESSIVE_PM);
     info("Done.");
 }
 
@@ -114,10 +116,10 @@ void initConfigServer() {
 #endif
     }
 
-    ssid = ssid_;
-    password = password_;
-    hostname = hostname_;
-    port = port_;
+    simpleWifiCredentials.ssid = ssid_;
+    simpleWifiCredentials.password = password_;
+    simpleWifiCredentials.hostname = hostname_;
+    simpleWifiCredentials.port = port_;
 
     disp.clear();
     disp.draw_string(10, 0, 1, "SAVING DATA...");
@@ -128,10 +130,10 @@ void initConfigServer() {
         info("Saving data to eeprom...");
 
         memory.writeBoolean(0, true);
-        memory.writeString(1, ssid);
-        memory.writeString(18, password);
-        memory.writeString(69, hostname);
-        memory.writeString(89, to_string(port));
+        memory.writeString(1, simpleWifiCredentials.ssid);
+        memory.writeString(18, simpleWifiCredentials.password);
+        memory.writeString(69, simpleWifiCredentials.hostname);
+        memory.writeString(89, to_string(simpleWifiCredentials.port));
 
         auto readSsid = memory.readString(1);
         auto readPassword = memory.readString(18);
@@ -143,7 +145,8 @@ void initConfigServer() {
             while (true) {}
         }
 
-        if (readSsid == ssid || readPassword == password || readHostname == hostname || readPort == port) {
+        if (readSsid == simpleWifiCredentials.ssid || readPassword == simpleWifiCredentials.password
+        || readHostname == simpleWifiCredentials.hostname || readPort == simpleWifiCredentials.port) {
             break;
         }
 
@@ -155,71 +158,6 @@ void initConfigServer() {
     dns_server_deinit(&dns_server);
     dhcp_server_deinit(&dhcp_server);
     cyw43_arch_deinit();
-}
-
-void setupEEpromSettings() {
-    if (gpio_get(BUTTON)) {
-        uint64_t startTime = get_absolute_time()._private_us_since_boot;
-        while (gpio_get(BUTTON)) {
-            uint64_t now = get_absolute_time()._private_us_since_boot;
-
-            std::stringstream in;
-            in << "in ";
-            in << to_string((now - startTime) / 1000 - 10);
-
-            disp.clear();
-            disp.draw_string(10, 0, 1, "ERASE MEMORY");
-            disp.draw_string(10, 10, 1, in.str().c_str());
-            disp.show();
-
-            if ((startTime + 10000) <= now) {
-                disp.clear();
-                disp.draw_string(10, 0, 1, "ERASING...");
-                disp.show();
-
-                for (int t = 0; t < 3; t++) {
-                    for(int i = 0; i < 128; i++) {
-                        memory.write(i, 0x00);
-                    }
-                }
-
-                break;
-            }
-
-        }
-    }
-
-
-    // Check if data stored in eeprom
-    if (!memory.readBoolean(0)) {
-        state = CONFIGURATION_WIFI;
-    } else {
-        // ssid 16 chars
-        // password 30 chars
-        // hostname 20 chars
-        // port 4 chars
-        // add to offset 1 because of 0x00 end of string
-
-        //load from memory
-        info("Loading data from memory...");
-        ssid = memory.readString(1);
-        password = memory.readString(18);
-        hostname = memory.readString(69);
-        port = atoi(memory.readString(89).c_str());
-        info("Loaded!");
-
-        printf("Loaded data: \n ssid: %s \n password: %s \n hostname: %s \n port: %d \n", ssid.c_str(), password.c_str(), hostname.c_str(), port);
-
-        bool v24detect = gpio_get(V_24_SENSE);
-        if (v24detect) {
-            gpio_put(RELAY_POWER_24V, true);
-            state = RUNNING_V24;
-        }
-
-        if (!v24detect) {
-            state = RUNNING_BATTERY;
-        }
-    }
 }
 
 void setupWifiSettings() {
@@ -237,14 +175,14 @@ void setupWifiSettings() {
 
     // Setup wifi
     wifi_manager.init();
-    wifi_manager.set_network(ssid, password);
+    wifi_manager.set_network(simpleWifiCredentials.ssid, simpleWifiCredentials.password);
     auto wifiSuccess = wifi_manager.connect();
 
     // Reset
     if (!wifiSuccess) {
-        watchdog_enable(9 * 1000, false);
         while(true) {}
     }
+    watchdog_update();
 
     if (wifi_manager.connected() == 0) {
         disp.clear();
@@ -253,6 +191,7 @@ void setupWifiSettings() {
         disp.show();
 
         busy_wait_ms(2000);
+        watchdog_update();
     }
 }
 
@@ -261,25 +200,22 @@ void loopShutdown(bool v24Present) {
     {
         shutdown();
 
-        sleep_run_from_xosc();
+        sleep_run_from_rosc();
+        //sleep_goto_dormant_until_pin(BUTTON, true, true);
+
         setupAlarm();
 
         sleep = true;
-        while (sleep) {
-            sleep_ms(15000);
-        }
-        awake();
+        do {
+            watchdog_update();
+            bool buttonPressed = gpio_get(BUTTON);
+            if (buttonPressed || rtcInterrupt) {
+                awake();
 
-//        do {
-//            info("Sleeping...");
-//            bool buttonPressed = gpio_get(BUTTON);
-//            if (buttonPressed || wakeUp) {
-//                awake();
-//
-//                wakeUp = false;
-//                sleep = false;
-//            }
-//        } while (sleep);
+                rtcInterrupt = false;
+                sleep = false;
+            }
+        } while (sleep);
 
         rtc_disable_alarm();
     }
@@ -291,14 +227,11 @@ void awake() {
 
     disp.clear();
     disp.draw_string(10, 0, 1, "Waking up...");
-    disp.draw_string(10, 10, 1, "scb: " + scb_orig);
-    disp.draw_string(10, 20, 1, "clock0: " + clock0_orig);
-    disp.draw_string(10, 30, 1, "clock1: " + clock1_orig);
     disp.show();
 
     //watchdog_enable(1, false);
 
-    recover_from_sleep(scb_orig, clock0_orig, clock1_orig);
+    recover_from_sleep(simpleClocks.scb_orig, simpleClocks.clock0_orig, simpleClocks.clock1_orig);
 
     info("WiFi infineon 43439 reinitializing...");
     if (cyw43_arch_init()) {
@@ -332,8 +265,38 @@ void shutdown() {
     disp.poweroff();
     disp.deinit();
 
+    cyw43_wifi_leave(&cyw43_state, CYW43_ITF_STA);
+    cyw43_arch_gpio_put(MPU_LED, false);
     cyw43_arch_deinit();
     gpio_put(MOSFET_LCD, false);
+}
+
+void setupWatchdogAlarm() {
+    printf("RTC Alarm Watchdog Setting!\n");
+    watchdogInterrupt = false;
+    datetime_t t = {
+            .year  = 2023,
+            .month = 01,
+            .day   = 13,
+            .dotw  = 3,
+            .hour  = 11,
+            .min   = 00,
+            .sec   = 00
+    };
+    rtc_set_datetime(&t);
+
+    // Alarm time
+    datetime_t alarm = {
+            .year  = 2023,
+            .month = 01,
+            .day   = 13,
+            .dotw  = 3,
+            .hour  = 11,
+            .min   = 15,
+            .sec   = 00
+    };
+
+    rtc_set_alarm(&alarm, &send_callback);
 }
 
 void setupAlarm() {
@@ -368,12 +331,85 @@ void setupAlarm() {
     sleep_goto_sleep_until(&alarm, &alarm_callback);
 }
 
+void setupEEpromSettings() {
+    setupWatchdogAlarm();
+
+    if (gpio_get(BUTTON)) {
+        uint64_t startTime = get_absolute_time()._private_us_since_boot;
+        while (gpio_get(BUTTON)) {
+            uint64_t now = get_absolute_time()._private_us_since_boot;
+            watchdog_update();
+
+            std::stringstream in;
+            in << "in ";
+            in << to_string((now - startTime) / 1000 - 10);
+
+            disp.clear();
+            disp.draw_string(10, 0, 1, "ERASE MEMORY");
+            disp.draw_string(10, 10, 1, in.str().c_str());
+            disp.show();
+
+            if ((startTime + 10000) <= now) {
+                disp.clear();
+                disp.draw_string(10, 0, 1, "ERASING...");
+                disp.show();
+
+                for (int t = 0; t < 3; t++) {
+                    for(int i = 0; i < 128; i++) {
+                        watchdog_update();
+                        memory.write(i, 0x00);
+                    }
+                }
+
+                break;
+            }
+
+        }
+    }
+
+
+    // Check if data stored in eeprom
+    if (!memory.readBoolean(0)) {
+        state = CONFIGURATION_WIFI;
+    } else {
+        // ssid 16 chars
+        // password 30 chars
+        // hostname 20 chars
+        // port 4 chars
+        // add to offset 1 because of 0x00 end of string
+
+        //load from memory
+        info("Loading data from memory...");
+        simpleWifiCredentials.ssid = memory.readString(1);
+        simpleWifiCredentials.password = memory.readString(18);
+        simpleWifiCredentials.hostname = memory.readString(69);
+        simpleWifiCredentials.port = atoi(memory.readString(89).c_str());
+        info("Loaded!");
+
+        printf("Loaded data: \n ssid: %s \n password: %s \n hostname: %s \n port: %d \n", simpleWifiCredentials.ssid.c_str(),
+               simpleWifiCredentials.password.c_str(), simpleWifiCredentials.hostname.c_str(), simpleWifiCredentials.port);
+
+        bool v24detect = gpio_get(V_24_SENSE);
+        if (v24detect) {
+            gpio_put(RELAY_POWER_24V, true);
+            state = RUNNING_V24;
+        }
+
+        if (!v24detect) {
+            state = RUNNING_BATTERY;
+        }
+    }
+
+    rtc_disable_alarm();
+}
+
+
 int main() {
     //Init pico usb
     stdio_init_all();
     //stdio_usb_init();
     info("USB interface initialization done.");
-    busy_wait_ms(2000);
+    busy_wait_ms(5000);
 
     //Init pico wifi module
     initInfineon();
@@ -404,21 +440,19 @@ int main() {
     initPullUps();
 
     info("Read internal battery voltage to configure module");
-    batteryVoltage = readInternalBatteryVoltage();
+    internalBattery = readInternalBatteryVoltage();
 
     disp.init(128, 32, 0x3C, I2C_ID);
-    if (batteryVoltage >= 3.80) {
-        disp.poweron();
-    } else {
-        disp.clear();
-        disp.deinit();
+    disp.poweron();
+
+    //TODO should be set by web interface
+    if (internalBattery <= 3.80) {
+        disp.disableDisplay();
     }
 
-    if (batteryVoltage >= 3.80) {
-        disp.clear();
-        disp.bmp_show_image(__paulek_bmp_data, 1086);
-        disp.show();
-    }
+    disp.clear();
+    disp.bmp_show_image(__paulek_bmp_data, 1086);
+    disp.show();
 
     busy_wait_ms(2000);
 
@@ -426,24 +460,17 @@ int main() {
     info("RTC clock initialization...");
     rtc_init();
 
-    multicore_launch_core1(core1_entry);
-
     // Save clock speed
-    scb_orig = scb_hw->scr;
-    clock0_orig = clocks_hw->sleep_en0;
-    clock1_orig = clocks_hw->sleep_en1;
-
-    printf("scb clock: %u \r\n", scb_orig);
-    printf("clock0 clock: %u \r\n", clock0_orig);
-    printf("clock1 clock: %u \r\n", clock1_orig);
+    simpleClocks.scb_orig = scb_hw->scr;
+    simpleClocks.clock0_orig = clocks_hw->sleep_en0;
+    simpleClocks.clock1_orig = clocks_hw->sleep_en1;
 
     // Setup watchdog
     info("Watchdog system initialization...");
-    //watchdog_enable(9 * 1000, false);
-    if(watchdog_caused_reboot()) info("ALERT!!! System rebooted by watchdog, investigation required.");
+    //watchdog_enable(9 * 1000, true);
 
+    multicore_launch_core1(core1_entry);
     setupEEpromSettings();
-
     setupWifiSettings();
 
     if (state == CONFIGURATION_HARDWARE) {
@@ -459,11 +486,13 @@ int main() {
     gpio_put(RELAY_POWER_24V, gpio_get(V_24_SENSE));
 
     disp.clear();
-    disp.draw_string(10, 10, 2, "WAIT");
+    disp.draw_string(10, 10, 1, "Trwa pomiar");
+    disp.draw_string(20, 20, 1, "Prosze czekac");
     disp.show();
 
-    batteryVoltage = readInternalBatteryVoltage();
-    info("Internal voltage: " + to_string(batteryVoltage));
+    internalBattery = readInternalBatteryVoltage();
+    info("Internal voltage: " + to_string(internalBattery));
+    watchdog_update();
 
 
     double batteryVoltage0 = readBatteryVoltage(RELAY_BAT_0);
@@ -474,45 +503,54 @@ int main() {
     info("Battery1 voltage: " + to_string(batteryVoltage1));
 
 
-    float temperature = readInternalTemperature();
-    bool highVoltagePresent = gpio_get(POWER_24V_READY);
+    //TODO should be set by web interface
+    if (internalBattery <= 3.80) {
+        disp.disableDisplay();
+    } else {
+        disp.enableDisplay();
+    }
 
+    float temperature = readInternalTemperature();
+    bool externalVoltagePresent = gpio_get(POWER_24V_READY);
+    watchdog_update();
 
     std::list<CurrentMeasurement> measurements;
-    CurrentMeasurement internalBattery("0", INTERNAL_BATTERY_VOLTAGE, batteryVoltage);
-    measurements.push_back(internalBattery);
+    CurrentMeasurement internalBatteryMeasurement("0", INTERNAL_BATTERY_VOLTAGE, internalBattery);
+    measurements.push_back(internalBatteryMeasurement);
+    watchdog_update();
 
     CurrentMeasurement temp("0", TEMPERATURE, temperature);
     measurements.push_back(temp);
+    watchdog_update();
 
     CurrentMeasurement battery0("0", BATTERY_VOLTAGE, batteryVoltage0);
     measurements.push_back(battery0);
+    watchdog_update();
 
     CurrentMeasurement battery1("1", BATTERY_VOLTAGE, batteryVoltage1);
     measurements.push_back(battery1);
+    watchdog_update();
 
     InterfaceMeasurement interfaceMeasurement("352da5cf-7e92-45ca-88a5-639e5dc2f592", BATTERY_MODE, measurements);
 
-    if (batteryVoltage >= 3.80) {
-        disp.clear();
-        disp.draw_string(10, 10, 2, "PACKAGE");
-        disp.show();
-    }
-
-    HTTPRequestBuilder requestBuilder(hostname.data(), port, "keep-alive", POST, "/smart-interface/measurement", JSON);
+    HTTPRequestBuilder requestBuilder(simpleWifiCredentials.hostname.data(), simpleWifiCredentials.port, "keep-alive", POST, "/smart-interface/measurement", JSON);
     requestBuilder.setPayload(interfaceMeasurement.serialize());
     info(requestBuilder.build_request());
 
-    if (batteryVoltage >= 3.80) {
-        disp.clear();
-        disp.draw_string(10, 10, 2, "SEND");
-        disp.show();
+    disp.clear();
+    disp.draw_string(10, 10, 1, "Wysylanie Danych");
+    disp.draw_string(20, 20, 1, "do serwera");
+    disp.show();
+
+    setupWatchdogAlarm();
+    WiFiManager::http_request(requestBuilder);
+    rtc_disable_alarm();
+
+    if (internalBattery >= 3.80) {
+        writeInfo(temperature, batteryVoltage0, batteryVoltage1, internalBattery, externalVoltagePresent);
     }
 
-    WiFiManager::http_request(requestBuilder);
-
-    if (batteryVoltage >= 3.80) writeInfo(temperature, batteryVoltage0, batteryVoltage1, batteryVoltage, highVoltagePresent);
-    loopShutdown(highVoltagePresent);
+    loopShutdown(externalVoltagePresent);
 
     loop();
 }
@@ -528,9 +566,11 @@ void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage
     
 
     busy_wait_ms(2000);
+    watchdog_update();
     sprintf(subtitle2, "Bateria 0: %2.2fV", batteryVoltage0);
 
     busy_wait_ms(2000);
+    watchdog_update();
     sprintf(subtitle3, "Bateria 1: %2.2fV", batteryVoltage1);
 
     disp.clear();
@@ -541,22 +581,23 @@ void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage
     disp.show();
 
     
-    busy_wait_ms(8000);
+    busy_wait_ms(3000);
+    watchdog_update();
     
 
     if (highVoltagePresent) {
         sprintf(subtitle, "Zasilanie 24V");
     } else {
-        sprintf(subtitle, "Brak 24V");
+        sprintf(title, "Praca na baterii");
+        sprintf(subtitle, "Przechodze w tryb uspienia");
     }
 
     disp.clear();
     disp.draw_string(0, 0, 1, title);
     disp.draw_string(0, 10, 1, subtitle);
-    disp.draw_string(0, 10, 1, subtitle);
     disp.show();
 
     
     busy_wait_ms(2000);
-    
+    watchdog_update();
 }

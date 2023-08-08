@@ -44,7 +44,6 @@ bool WiFiManager::connect() {
                 uint64_t now = get_absolute_time()._private_us_since_boot;
 
                 if ((startTime + (10 * 1000)) <= now) {
-                    watchdog_enable(1000, false);
                     return false;
                 }
                 watchdog_update();

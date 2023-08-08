@@ -4,6 +4,7 @@
 
 #include <sstream>
 #include "eeprom.h"
+#include "hardware/watchdog.h"
 
 void eeprom::write(unsigned int address_, uint8_t data) {
     uint8_t d[2]= {(uint8_t) address_, data};

@@ -1,8 +1,6 @@
 #ifndef CNCSMARTINTERFACE_MAIN_H
 #define CNCSMARTINTERFACE_MAIN_H
 
-#endif //CNCSMARTINTERFACE_MAIN_H
-
 #include <stdlib.h>
 #include "oled/oled_display.h"
 #include <pico/stdlib.h>
@@ -41,8 +39,6 @@
 
 using namespace std;
 
-#define FIRMWARE_VERSION     "v0.1"
-
 enum State {
     CONFIGURATION_WIFI,
     CONFIGURATION_HARDWARE,
@@ -50,26 +46,30 @@ enum State {
     RUNNING_V24
 };
 
-uint scb_orig;
-uint clock0_orig;
-uint clock1_orig;
+struct {
+    uint scb_orig;
+    uint clock0_orig;
+    uint clock1_orig;
+} simpleClocks;
 
-State state;
+struct {
+    std::string ssid;
+    std::string password;
+    std::string hostname;
+    uint port{};
+} simpleWifiCredentials;
 
-std::string ssid;
-std::string password;
-
-std::string hostname;
-uint port;
-
+oled_display disp;
 WiFiManager wifi_manager;
 eeprom memory(0x50, I2C_ID);
+State state;
 
+bool watchdogInterrupt = false;
+bool rtcInterrupt = false;
 bool sleep = false;
-double batteryVoltage = 4.5;
+double internalBattery = 4.5;
 
 int dots = 0;
-bool goingUp = false;
 
 [[noreturn]] void loop();
 void shutdown();
@@ -78,4 +78,4 @@ void setupAlarm();
 
 void writeInfo(double temperature, double batteryVoltage0, double batteryVoltage1, double internalBattery, bool highVoltagePresent);
 
-oled_display disp;
+#endif //CNCSMARTINTERFACE_MAIN_H

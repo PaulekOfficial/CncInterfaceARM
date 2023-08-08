@@ -240,3 +240,13 @@ void oled_display::show() {
 
     fancy_write(i2c_i, address, buffer-1, bufsize+1, "oled_display::show");
 }
+
+void oled_display::disableDisplay() {
+    clear();
+    poweroff();
+    disabled = true;
+}
+
+void oled_display::enableDisplay() {
+    disabled = false;
+}

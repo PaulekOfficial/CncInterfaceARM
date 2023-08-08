@@ -9,6 +9,7 @@
 // For MHZ definitions etc
 #include "hardware/clocks.h"
 #include "rosc.h"
+#include "pico/printf.h"
 
 // Given a ROSC delay stage code, return the next-numerically-higher code.
 // Top result bit is set when called on maximum ROSC code.

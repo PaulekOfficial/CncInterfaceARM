@@ -44,7 +44,7 @@ void sleep_run_from_dormant_source(dormant_source_t dormant_source) {
     _dormant_source = dormant_source;
 
     // FIXME: Just defining average rosc freq here.
-    uint src_hz = (dormant_source == DORMANT_SOURCE_XOSC) ? XOSC_MHZ * MHZ : 1.8 * MHZ;
+    uint src_hz = (dormant_source == DORMANT_SOURCE_XOSC) ? XOSC_MHZ * MHZ : 6.5 * MHZ;
     uint clk_ref_src = (dormant_source == DORMANT_SOURCE_XOSC) ?
                        CLOCKS_CLK_REF_CTRL_SRC_VALUE_XOSC_CLKSRC :
                        CLOCKS_CLK_REF_CTRL_SRC_VALUE_ROSC_CLKSRC_PH;
@@ -122,6 +122,16 @@ void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig) {
     return;
 }
 
+static void go_dormant(void) {
+    assert(dormant_source_valid(_dormant_source));
+
+    if (_dormant_source == DORMANT_SOURCE_XOSC) {
+        xosc_dormant();
+    } else {
+        rosc_set_dormant();
+    }
+}
+
 // Go to sleep until woken up by the RTC
 void sleep_goto_sleep_until(datetime_t *t, rtc_callback_t callback) {
     // We should have already called the sleep_run_from_dormant_source function
@@ -139,16 +149,7 @@ void sleep_goto_sleep_until(datetime_t *t, rtc_callback_t callback) {
 
     // Go to sleep
     __wfi();
-}
-
-static void _go_dormant(void) {
-    assert(dormant_source_valid(_dormant_source));
-
-    if (_dormant_source == DORMANT_SOURCE_XOSC) {
-        xosc_dormant();
-    } else {
-        rosc_set_dormant();
-    }
+    go_dormant();
 }
 
 void sleep_goto_dormant_until_pin(uint gpio_pin, bool edge, bool high) {
@@ -167,7 +168,7 @@ void sleep_goto_dormant_until_pin(uint gpio_pin, bool edge, bool high) {
 
     gpio_set_dormant_irq_enabled(gpio_pin, event, true);
 
-    _go_dormant();
+    go_dormant();
     // Execution stops here until woken up
 
     // Clear the irq so we can go back to dormant mode again if we want
